@@ -7,9 +7,9 @@ cd "$(dirname "$0")/.."
 echo "==> pytest"
 python -m pytest
 echo "==> flake8"
-python -m flake8 app tests
+python -m flake8 app tests scripts
 echo "==> mypy"
 python -m mypy
 echo "==> pylint"
-python -m pylint app tests
+python -m pylint app tests scripts
 echo "All checks passed."

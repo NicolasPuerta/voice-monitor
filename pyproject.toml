@@ -8,7 +8,11 @@ version = "0.1.0"
 description = "Monitor de Ubuntu que analiza el sistema con Gemini y reproduce el análisis por audio."
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = []
+dependencies = [
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "psutil>=5.9",
+]
 
 [project.optional-dependencies]
 dev = [
@@ -17,6 +21,7 @@ dev = [
     "flake8>=7.0",
     "pylint>=3.0",
     "mypy>=1.10",
+    "types-psutil",
 ]
 
 [tool.setuptools.packages.find]
@@ -29,10 +34,11 @@ addopts = "-ra --strict-markers"
 
 [tool.mypy]
 python_version = "3.10"
-files = ["app", "tests"]
+files = ["app", "tests", "scripts"]
 strict = true
 warn_unreachable = true
 pretty = true
+plugins = ["pydantic.mypy"]
 
 [tool.pylint.main]
 py-version = "3.10"
@@ -40,6 +46,11 @@ jobs = 0
 
 [tool.pylint.format]
 max-line-length = 90
+
+[tool.pylint.typecheck]
+# Pylint infers pydantic's Field(default_factory=...) attributes as FieldInfo,
+# which raises false no-member errors.
+ignored-classes = ["FieldInfo"]
 
 [tool.pylint."messages control"]
 disable = [
