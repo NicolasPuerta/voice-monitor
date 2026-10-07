@@ -1,0 +1,11 @@
+[flake8]
+# flake8 does not read pyproject.toml natively, so it has its own file
+max-line-length = 90
+exclude =
+    .git,
+    __pycache__,
+    .venv,
+    venv,
+    build,
+    dist,
+    *.egg-info
