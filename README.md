@@ -17,9 +17,13 @@ Ubuntu → Python Monitor → System Context → Gemini → Analysis → Audio �
 
 ## Estado
 
-Configuración central y modelos de dominio. Aún no están implementados los
-collectors, la detección de eventos, la integración con Gemini ni el audio.
-El agente es estrictamente de solo lectura.
+Hasta el momento se ha implementado lo siguiente:
+
+- **Estructura del Proyecto y Configuración:** Pytest, flake8, mypy, pylint (MR 01).
+- **Configuración y Modelos de Dominio:** Configuración centralizada con Pydantic Settings y modelos de dominio inmutables (MR 02).
+- **Process Collector:** Observación de procesos de Linux (`pid`, `estado`, `CPU`, `memoria`, `cmdline` sanitizado) utilizando `psutil` de forma segura y sin modificar procesos (MR 03).
+
+Aún no están implementados otros collectors, la normalización, la detección de eventos, la integración con Gemini ni el TTS. El agente es estrictamente de solo lectura.
 
 ## Estructura
 
