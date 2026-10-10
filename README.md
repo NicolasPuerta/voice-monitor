@@ -113,3 +113,20 @@ O todo junto: `bash scripts/check.sh`.
 - Comentarios técnicos preferiblemente en inglés.
 - Mensajes al usuario pueden estar en español.
 - Type hints obligatorios; longitud máxima de línea: 90.
+
+## Audio y Reproducción (WSL vs Ubuntu Nativo)
+El sistema reproduce el análisis de Gemini mediante altavoces, operando en un hilo independiente para evitar bloqueos (AudioQueueManager).
+Implementa fallback automático (Gemini Audio -> Piper -> espeak-ng) y caché en memoria para no regenerar el mismo reporte repetidas veces.
+
+### Diferencias de Entorno
+- **Ubuntu Nativo:** Utiliza la configuración de audio predeterminada (ALSA, PulseAudio, PipeWire). Herramientas como play o paplay funcionan _out-of-the-box_ sin lag notable.
+- **WSL (Windows Subsystem for Linux):** Requiere **WSLg** para soportar el puente de PulseAudio automáticamente hacia el host de Windows. Si el audio no se escucha en WSL:
+  1. Verifica que WSLg esté habilitado.
+  2. Opcionalmente redirige el output de audio hacia el ejecutable nativo de Windows (e.g. usando powershell o un servidor PulseAudio en Windows).
+
+## Ejecución de Demo End-to-End
+Puedes probar la arquitectura completa sin integrarla todavía en el main.py usando el script de demostración incluido:
+`ash
+python scripts/demo_pipeline.py
+`
+Este comando encenderá el NarrationPipeline, usará Gemini y generará voz sintética usando las prioridades configuradas. Para detenerlo, usa Ctrl+C.

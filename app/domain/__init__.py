@@ -17,9 +17,16 @@ from app.domain.snapshots import (
 )
 from app.domain.context import ApplicationGroup, SystemContext
 from app.domain.knowledge import KnowledgeSource, ProcessKnowledge
+from app.domain.gemini import AnalysisResult, GeminiContext, SafeEventSummary
+from app.domain.prompts import ANALYSIS_SYSTEM_PROMPT_V1
+from app.domain.audio import AudioData, AudioFormat
 
 __all__ = [
+    "ANALYSIS_SYSTEM_PROMPT_V1",
+    "AnalysisResult",
     "ApplicationGroup",
+    "AudioData",
+    "AudioFormat",
     "ConfidenceLevel",
     "Event",
     "EventDecision",
@@ -27,11 +34,13 @@ __all__ = [
     "EventPriority",
     "EventSeverity",
     "EventType",
+    "GeminiContext",
     "KnowledgeSource",
     "PressureStall",
     "ProcessKnowledge",
     "ProcessSnapshot",
     "ResourceSnapshot",
+    "SafeEventSummary",
     "ScoreBreakdown",
     "ScoreResult",
     "SystemContext",
