@@ -49,11 +49,20 @@ def run_demo() -> None:
 
     # 3. Audio
     player = SystemAudioPlayer()
+    
+    fallbacks = []
+    
+    # Piper si fue configurado en .env
+    from app.core.audio.adapters.piper import PiperGenerator
+    if settings.narration.piper_model_path:
+        piper = PiperGenerator(model_path=settings.narration.piper_model_path)
+        fallbacks.append(piper)
+        
     espeak = EspeakGenerator(voice="es-la")
+    fallbacks.append(espeak)
+    
     gemini_audio = GeminiAudioGenerator(settings)
-    audio_manager = AudioQueueManager(
-        player, primary_generator=gemini_audio, fallback_generators=[espeak]
-    )
+    audio_manager = AudioQueueManager(player, primary_generator=gemini_audio, fallback_generators=fallbacks)
 
     # 4. Core
     context_builder = SystemContextBuilder()

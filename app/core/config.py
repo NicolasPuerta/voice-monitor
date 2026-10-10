@@ -150,6 +150,9 @@ class NarrationSettings(_GroupSettings):
     event_ttl_s: float = Field(default=60.0, gt=0)
     """Segundos de vigencia de un evento antes de descartarse sin narrar."""
 
+    piper_model_path: str | None = None
+    """Ruta opcional al modelo .onnx de Piper TTS."""
+
     @field_validator("verbosity", mode="before")
     @classmethod
     def _normalize_verbosity(cls, value: object) -> object:
