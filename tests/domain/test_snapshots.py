@@ -27,9 +27,6 @@ def make_resources(**overrides: object) -> ResourceSnapshot:
         "memory_used_bytes": 8_000,
         "memory_available_bytes": 8_000,
         "memory_percent": 50.0,
-        "disk_total_bytes": 500_000,
-        "disk_used_bytes": 250_000,
-        "disk_percent": 50.0,
     }
     values.update(overrides)
     return ResourceSnapshot(**values)

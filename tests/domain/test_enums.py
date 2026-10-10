@@ -19,7 +19,7 @@ def test_enums_can_be_built_from_value() -> None:
     """Verifica que los enums se construyan desde su valor textual."""
     assert EventType("cpu_spike") is EventType.CPU_SPIKE
     assert EventSeverity("critical") is EventSeverity.CRITICAL
-    assert EventDecision("narrate") is EventDecision.NARRATE
+    assert EventDecision("spoken") is EventDecision.SPOKEN
     assert ConfidenceLevel("high") is ConfidenceLevel.HIGH
 
 

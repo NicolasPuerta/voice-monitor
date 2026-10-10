@@ -81,13 +81,13 @@ class ResourceSnapshot(DomainModel):
     swap_percent: Percent = 0.0
     """Porcentaje de swap en uso."""
 
-    disk_total_bytes: NonNegativeInt
+    disk_total_bytes: NonNegativeInt | None = None
     """Capacidad total del disco principal, en bytes."""
 
-    disk_used_bytes: NonNegativeInt
+    disk_used_bytes: NonNegativeInt | None = None
     """Espacio usado del disco principal, en bytes."""
 
-    disk_percent: Percent
+    disk_percent: Percent | None = None
     """Porcentaje usado del disco principal."""
 
     disk_read_bytes_per_s: NonNegativeFloat | None = None

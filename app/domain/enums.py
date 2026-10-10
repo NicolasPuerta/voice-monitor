@@ -30,13 +30,23 @@ class EventSeverity(str, Enum):
     CRITICAL = "critical"
 
 
-class EventDecision(str, Enum):
-    """Decisión de priorización tomada sobre un evento."""
+class EventPriority(str, Enum):
+    """Prioridad de reproduccion del evento."""
 
-    NARRATE = "narrate"
-    DEFER = "defer"
-    AGGREGATE = "aggregate"
-    SUPPRESS = "suppress"
+    CRITICAL = "critical"
+    HIGH = "high"
+    NORMAL = "normal"
+    AMBIENT = "ambient"
+
+
+class EventDecision(str, Enum):
+    """Decision de priorizacion tomada sobre un evento."""
+
+    SPOKEN = "spoken"
+    THRESHOLD_OMITTED = "threshold_omitted"
+    DEFERRED = "deferred"
+    DND = "dnd"
+    EXPIRED = "expired"
 
 
 class ConfidenceLevel(str, Enum):

@@ -21,9 +21,13 @@ Hasta el momento se ha implementado lo siguiente:
 
 - **Estructura del Proyecto y Configuración:** Pytest, flake8, mypy, pylint (MR 01).
 - **Configuración y Modelos de Dominio:** Configuración centralizada con Pydantic Settings y modelos de dominio inmutables (MR 02).
-- **Process Collector:** Observación de procesos de Linux (`pid`, `estado`, `CPU`, `memoria`, `cmdline` sanitizado) utilizando `psutil` de forma segura y sin modificar procesos (MR 03).
+- **Process Collector:** Observación de procesos de Linux (pid, stado, CPU, memoria, cmdline sanitizado) utilizando psutil de forma segura (MR 03).
+- **System Metrics Collectors:** Métricas del sistema, PSI desde /proc/pressure/ y estado energético desde /sys/class/power_supply/ (MR 04).
+- **Application Grouping and Context:** SystemContextBuilder para combinar métricas con agrupación lógica heurística basada en cgroups y árbol de procesos (MR 05).
+- **Event Prioritization and Flow Control:** ScoringEngine determinista, ventanas de coalescencia (EventGrouper), PriorityQueue (TTL) y prevencion de saturación sonora con FlowController (MR 07).
+- **Persistence and Process Knowledge Base:** Persistencia SQLite (WAL) y base de conocimiento versionada sobre procesos de Linux comunes (MR 08).
 
-Aún no están implementados otros collectors, la normalización, la detección de eventos, la integración con Gemini ni el TTS. El agente es estrictamente de solo lectura.
+Aún no están implementados la detección de anomalías complejas, la integración final con Gemini ni el TTS.
 
 ## Estructura
 

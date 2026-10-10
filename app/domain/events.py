@@ -9,17 +9,14 @@ from app.domain.base import DomainModel, NonNegativeFloat, NonNegativeInt
 from app.domain.enums import (
     ConfidenceLevel,
     EventDecision,
+    EventPriority,
     EventSeverity,
     EventType,
 )
 
 
 def _utc_now() -> datetime:
-    """Obtiene la fecha y hora actual en UTC.
-
-    Returns:
-        Fecha y hora actual con zona horaria UTC.
-    """
+    """Obtiene la fecha y hora actual en UTC."""
     return datetime.now(timezone.utc)
 
 
@@ -27,53 +24,60 @@ class EventMetadata(DomainModel):
     """Datos de contexto que acompañan a un evento."""
 
     process_pid: NonNegativeInt | None = None
-    """Proceso involucrado, si aplica."""
-
     process_name: str | None = None
-    """Nombre del proceso involucrado, si aplica."""
-
+    app_key: str | None = None
+    app_name: str | None = None
     metric_name: str | None = None
-    """Nombre de la métrica que originó el evento."""
-
     metric_value: float | None = None
-    """Valor observado de la métrica."""
-
     threshold: float | None = None
-    """Umbral que se superó, si aplica."""
-
     unit: str | None = None
-    """Unidad de la métrica (por ejemplo, ``%`` o ``bytes``)."""
-
     duration_s: NonNegativeFloat | None = None
-    """Segundos que lleva activa la condición."""
-
     extra: dict[str, str] = Field(default_factory=dict)
-    """Datos adicionales en formato clave-valor."""
+
+
+class ScoreBreakdown(DomainModel):
+    """Desglose del puntaje de un evento para su explicabilidad."""
+
+    impact: float
+    novelty: float
+    anomaly: float
+    risk: float
+    relevance: float
+    repetition_penalty: float
+
+    @property
+    def total(self) -> float:
+        return (
+            self.impact
+            + self.novelty
+            + self.anomaly
+            + self.risk
+            + self.relevance
+            - self.repetition_penalty
+        )
+
+
+class ScoreResult(DomainModel):
+    """Resultado final de la priorización de un evento."""
+
+    score: float
+    priority: EventPriority
+    breakdown: ScoreBreakdown
+    reasons: list[str] = Field(default_factory=list)
 
 
 class Event(DomainModel):
-    """Evento detectado, con su gravedad y decisión de priorización."""
+    """Evento detectado."""
 
     id: UUID = Field(default_factory=uuid4)
-    """Identificador único del evento."""
-
     event_type: EventType
-    """Tipo de evento."""
-
     severity: EventSeverity
-    """Gravedad del evento."""
-
     confidence: ConfidenceLevel = ConfidenceLevel.MEDIUM
-    """Confianza en que el evento es real y relevante."""
-
+    
+    # Propiedades calculadas en la tubería
     decision: EventDecision | None = None
-    """Decisión de priorización; ``None`` mientras no se haya evaluado."""
-
+    score_result: ScoreResult | None = None
+    
     detected_at: AwareDatetime = Field(default_factory=_utc_now)
-    """Momento de la detección (con zona horaria)."""
-
     summary: str = Field(min_length=1)
-    """Descripción breve del evento, legible por una persona."""
-
     metadata: EventMetadata = Field(default_factory=EventMetadata)
-    """Datos de contexto del evento."""

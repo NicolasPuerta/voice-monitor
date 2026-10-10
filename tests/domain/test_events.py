@@ -62,7 +62,7 @@ def test_event_rejects_invalid_enum_values() -> None:
 def test_event_json_roundtrip() -> None:
     """Verifica que un evento sobreviva a la serialización JSON."""
     event = make_event(
-        decision=EventDecision.NARRATE,
+        decision=EventDecision.SPOKEN,
         detected_at=datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc),
         metadata=EventMetadata(
             process_pid=42,
