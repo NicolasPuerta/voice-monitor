@@ -33,3 +33,4 @@ Thumbs.db
 # Generated audio
 *.wav
 *.mp3
+tests/
