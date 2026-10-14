@@ -1,0 +1,66 @@
+# Ubuntu Voice Monitor - systemd User Service (MR 17)
+#
+# Ubicación para instalación de usuario:
+#   ~/.config/systemd/user/voice-monitor.service
+#
+# Para habilitar e iniciar:
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now voice-monitor.service
+#
+# Para ver registros en tiempo real:
+#   journalctl --user -u voice-monitor -f
+
+[Unit]
+Description=Ubuntu Voice Monitor - Observación inteligente del sistema con narración por voz
+Documentation=https://github.com/example/ubuntu-voice-monitor
+After=default.target sound.target dbus.socket pipewire.service pulseaudio.service
+Wants=sound.target
+StartLimitIntervalSec=60s
+StartLimitBurst=5
+
+[Service]
+Type=simple
+
+# Carga de configuración externa opcional (precedencia de derecha a izquierda o archivo local)
+EnvironmentFile=-%h/.config/ubuntu-voice-monitor/config.env
+EnvironmentFile=-%h/.env
+
+# Ejecución en primer plano con el ejecutable del entorno del usuario (pipx o venv)
+ExecStart=%h/.local/bin/narrator start --foreground
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=10s
+
+# Logging estructurado directo a systemd journal
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=voice-monitor
+
+# ------------------------------------------------------------------------------
+# Endurecimiento y Mínimos Privilegios (Least Privilege Sandboxing)
+# ------------------------------------------------------------------------------
+# Prevenir elevación de privilegios
+NoNewPrivileges=yes
+
+# Descartar todas las capacidades de kernel (proceso 100% no privilegiado)
+CapabilityBoundingSet=
+
+# Aislamiento de sistema de archivos
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=%h/.local/share/ubuntu-voice-monitor %h/.config/ubuntu-voice-monitor /run/user/%U
+PrivateTmp=yes
+
+# Restricciones de kernel y namespaces
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+
+# Permitir memoria para motores TTS / ONNX Runtime (Piper)
+MemoryDenyWriteExecute=no
+
+[Install]
+WantedBy=default.target
