@@ -5,7 +5,10 @@ from typing import Iterable
 
 from app.collectors.health import SourceHealthManager
 from app.domain.context import ApplicationGroup, SystemContext
+from app.domain.journald import JournaldSnapshot
+from app.domain.risk import RiskSignal
 from app.domain.snapshots import ProcessSnapshot, ResourceSnapshot, SystemPressure
+from app.domain.systemd import SystemdSnapshot
 
 SHELLS_AND_TERMINALS = {
     "bash",
@@ -36,15 +39,47 @@ class SystemContextBuilder:
         self,
         *,
         collected_at: datetime | None = None,
-        resources: ResourceSnapshot,
+        resources: ResourceSnapshot | None = None,
         pressure: SystemPressure | None = None,
         uptime_s: float | None = None,
-        processes: Iterable[ProcessSnapshot],
-        health_manager: SourceHealthManager,
+        processes: Iterable[ProcessSnapshot] | None = None,
+        health_manager: SourceHealthManager | None = None,
+        systemd: SystemdSnapshot | None = None,
+        journald: JournaldSnapshot | None = None,
+        risk_signals: tuple[RiskSignal, ...] = (),
     ) -> SystemContext:
         """Agrupa los procesos y construye el SystemContext."""
         if collected_at is None:
             collected_at = datetime.now(timezone.utc)
+
+        if health_manager is None:
+            health_manager = SourceHealthManager()
+
+        if resources is None:
+            try:
+                from app.collectors.system import SystemResourceCollector
+
+                sys_coll = SystemResourceCollector(health_manager)
+                resources = sys_coll.collect()
+                uptime_s = sys_coll.get_uptime()
+            except Exception:
+                resources = ResourceSnapshot(
+                    cpu_percent=0.0,
+                    cpu_count_logical=1,
+                    memory_total_bytes=1000,
+                    memory_used_bytes=500,
+                    memory_available_bytes=500,
+                    memory_percent=50.0,
+                )
+
+        if processes is None:
+            try:
+                from app.collectors.process import ProcessCollector
+
+                proc_coll = ProcessCollector()
+                processes = proc_coll.collect()
+            except Exception:
+                processes = []
 
         apps = self._group_processes(processes)
 
@@ -54,6 +89,8 @@ class SystemContextBuilder:
             "energy": health_manager.get_state("energy").value,
             "process": health_manager.get_state("process").value,
         }
+        for s_name, s_state in health_manager.get_all_states().items():
+            health_states[s_name] = s_state.value
 
         return SystemContext(
             collected_at=collected_at,
@@ -62,6 +99,9 @@ class SystemContextBuilder:
             uptime_s=uptime_s,
             apps=tuple(apps),
             source_health=health_states,
+            systemd=systemd,
+            journald=journald,
+            risk_signals=risk_signals,
         )
 
     def _group_processes(
@@ -168,8 +208,9 @@ class SystemContextBuilder:
                     return f"{root.name} ({script})"
 
         if root.cgroup and "app-gnome-" in root.cgroup:
-            # e.g., app-gnome-firefox-12345.scope
-            parts = root.cgroup.split("-")
+            # e.g., /user.slice/app-gnome-firefox-12345.scope
+            scope_part = root.cgroup.split("/")[-1]
+            parts = scope_part.split("-")
             for part in parts:
                 if part not in ("app", "gnome") and not part.endswith(".scope"):
                     return part.replace(".scope", "")

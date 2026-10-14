@@ -61,6 +61,8 @@ def main(argv: list[str] | None = None, run_loop: bool | None = None) -> int:
 
     args = parser.parse_args(argv)
 
+    from app.collectors.health import SourceHealthManager
+    from app.core.dnd import DNDManager
     from app.core.analysis import AnalysisAgent
     from app.core.audio.adapters.espeak import EspeakGenerator
     from app.core.audio.adapters.gemini import GeminiAudioGenerator
@@ -89,8 +91,15 @@ def main(argv: list[str] | None = None, run_loop: bool | None = None) -> int:
     logger = get_logger("app.main")
     logger.info("Iniciando componentes del monitor...")
 
+    # 0. Salud de fuentes y No Molestar (DND)
+    health_manager = SourceHealthManager()
+    dnd_manager = DNDManager(
+        health_manager=health_manager,
+        manual_dnd=settings.dnd.enabled,
+    )
+
     # 1. Base de datos
-    db = BackgroundDatabase(settings.storage.db_path)
+    db = BackgroundDatabase(settings.storage.db_path, health_manager=health_manager)
     event_repo = EventRepository(db)
     knowledge_repo = KnowledgeRepository(db)
 
@@ -117,6 +126,7 @@ def main(argv: list[str] | None = None, run_loop: bool | None = None) -> int:
         player,
         primary_generator=piper,
         fallback_generators=fallbacks,
+        health_manager=health_manager,
     )
 
     # 4. Pipeline Core
@@ -140,6 +150,8 @@ def main(argv: list[str] | None = None, run_loop: bool | None = None) -> int:
         event_repo=event_repo,
         knowledge_repo=knowledge_repo,
         test_mode_gemini=args.test_gemini,
+        dnd_manager=dnd_manager,
+        health_manager=health_manager,
     )
 
     logger.info(

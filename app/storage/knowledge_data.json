@@ -1,0 +1,2252 @@
+[
+  {
+    "key": "systemd",
+    "short_text": "Administrador de sistema y servicios de Linux.",
+    "long_text": "PID 1 del sistema operativo. Gestiona el arranque, demonios y cgroups.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "systemd-journald",
+    "short_text": "Demonio de registro y captura de eventos del sistema (journald).",
+    "long_text": "Recolecta logs estructurados de servicios, kernel y syslog en memoria o disco.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "systemd-resolved",
+    "short_text": "Servicio de resolución local de nombres de red y caché DNS.",
+    "long_text": "Proporciona resolución DNS, DNSSEC, LLMNR y mDNS con caché local en 127.0.0.53.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "systemd-logind",
+    "short_text": "Gestor de inicios de sesión, asientos de usuario y energía.",
+    "long_text": "Administra sesiones interactivas, asientos locales y eventos de botón de encendido.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "systemd-udevd",
+    "short_text": "Demonio gestor de eventos de dispositivos del kernel (udev).",
+    "long_text": "Crea nodos en /dev, carga módulos y aplica reglas cuando se conectan periféricos.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "systemd-timesyncd",
+    "short_text": "Cliente ligero de sincronización horaria mediante SNTP.",
+    "long_text": "Mantiene el reloj del sistema sincronizado periódicamente con servidores NTP de red.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "systemd-networkd",
+    "short_text": "Demonio de configuración de interfaces y enlaces de red.",
+    "long_text": "Administra configuraciones de red estáticas, DHCP y enlaces virtuales en Linux.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "systemd-oomd",
+    "short_text": "Demonio en espacio de usuario para mitigación de presión de memoria.",
+    "long_text": "Monitorea PSI de memoria y termina grupos de control saturados antes del kernel OOM.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "systemd-machined",
+    "short_text": "Servicio de registro y monitorización de máquinas virtuales y contenedores.",
+    "long_text": "Rastrea instancias de contenedores locales y máquinas virtuales registradas.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "systemd-userworkerd",
+    "short_text": "Proceso trabajador auxiliar para servicios de usuario de systemd.",
+    "long_text": "Ejecuta tareas auxiliares transitorias para la instancia systemd --user.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "init",
+    "short_text": "Proceso ancestro de inicialización clásico del sistema.",
+    "long_text": "En sistemas modernos es un enlace simbólico hacia el binario ejecutable de systemd.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "dbus-daemon",
+    "short_text": "Demonio de bus de mensajes de comunicación interprocesos (D-Bus).",
+    "long_text": "Canaliza eventos y llamadas RPC entre servicios del sistema y aplicaciones de usuario.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "dbus-broker",
+    "short_text": "Implementación moderna y de alto rendimiento de bus D-Bus.",
+    "long_text": "Reemplazo basado en el kernel Linux para el demonio clásico de mensajes D-Bus.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "cron",
+    "short_text": "Demonio planificador de tareas programadas del sistema.",
+    "long_text": "Ejecuta trabajos en segundo plano periódicamente según los archivos crontab.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "crond",
+    "short_text": "Demonio de ejecución de cron en diversas distribuciones Linux.",
+    "long_text": "Planifica ejecuciones periódicas definidas en tablas de configuración del sistema.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "anacron",
+    "short_text": "Planificador de comandos que no asume ejecución continua del equipo.",
+    "long_text": "Ejecuta trabajos diarios, semanales o mensuales cuando el sistema vuelve a encenderse.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "atd",
+    "short_text": "Demonio de ejecución de comandos diferidos programados mediante 'at'.",
+    "long_text": "Supervisa y ejecuta comandos especificados para ejecutarse en un momento futuro único.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "rsyslogd",
+    "short_text": "Demonio de procesamiento y registro de bitácoras del sistema syslog.",
+    "long_text": "Recolecta mensajes de bitácora del sistema y los enruta hacia archivos locales o remotos.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "syslog-ng",
+    "short_text": "Gestor avanzado de registros de bitácora y eventos de red.",
+    "long_text": "Alternativa flexible a rsyslog para filtrado y enrutamiento centralizado de logs.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "klogd",
+    "short_text": "Demonio interceptor de mensajes del búfer del kernel Linux.",
+    "long_text": "Captura advertencias y errores del kernel y los redirige hacia el demonio syslog.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "auditd",
+    "short_text": "Demonio del subsistema de auditoría de seguridad del kernel.",
+    "long_text": "Registra accesos a archivos sensibles, llamadas al sistema y eventos de seguridad.",
+    "category": "security",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "polkitd",
+    "short_text": "Demonio del marco de autorización de privilegios Polkit.",
+    "long_text": "Evalúa políticas de seguridad para conceder privilegios a procesos sin setuid root.",
+    "category": "security",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "accounts-daemon",
+    "short_text": "Servicio de manipulación y consulta de cuentas de usuario.",
+    "long_text": "Proporciona interfaces D-Bus para gestionar usuarios, avatares e inicios de sesión.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "upowerd",
+    "short_text": "Demonio de monitorización de fuentes de energía y baterías.",
+    "long_text": "Registra niveles de carga, adaptadores de corriente y estados de suspensión del equipo.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "colord",
+    "short_text": "Demonio de gestión de perfiles de color (ICC) para pantallas e impresoras.",
+    "long_text": "Administra la calibración de color del hardware de visualización y captura.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "boltd",
+    "short_text": "Demonio de autorización y gestión de dispositivos Thunderbolt.",
+    "long_text": "Controla los niveles de seguridad y el enlace de periféricos en puertos Thunderbolt.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "fwupd",
+    "short_text": "Demonio de actualización de firmware de dispositivos de hardware.",
+    "long_text": "Descarga e instala paquetes de firmware validados por fabricantes vía Linux Vendor Firmware Service.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "smartd",
+    "short_text": "Demonio de monitorización de atributos SMART y diagnóstico de discos.",
+    "long_text": "Supervisa la salud física de unidades HDD/SSD y avisa sobre fallos inminentes.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "haveged",
+    "short_text": "Demonio de recolección de entropía basado en el algoritmo HAVEGE.",
+    "long_text": "Alimenta el generador de números aleatorios (/dev/random) en máquinas con baja entropía.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "rngd",
+    "short_text": "Demonio que alimenta el generador de entropía desde fuentes de hardware.",
+    "long_text": "Transfiere datos aleatorios desde módulos TRNG del procesador hacia el kernel.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "irqbalance",
+    "short_text": "Demonio de balanceo de interrupciones de hardware entre núcleos de CPU.",
+    "long_text": "Distribuye las interrupciones de E/S para evitar saturar un solo hilo del procesador.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "acpid",
+    "short_text": "Demonio despachador de eventos de energía ACPI de la placa base.",
+    "long_text": "Atiende eventos de botones físicos, tapa de laptop y transiciones de corriente.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "thermald",
+    "short_text": "Demonio de monitorización térmica y prevención de sobrecalentamiento.",
+    "long_text": "Ajusta ventiladores y límites de frecuencia de reloj ante picos térmicos de CPU.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "multipathd",
+    "short_text": "Demonio de gestión de múltiples rutas redundantes a dispositivos de bloque.",
+    "long_text": "Controla rutas concurrentes de acceso a cabinas SAN y enlaces de almacenamiento.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "mdadm",
+    "short_text": "Herramienta y servicio de monitorización de matrices RAID por software.",
+    "long_text": "Supervisa el estado y la reconstrucción de volúmenes de disco multidisco en Linux.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "rpcbind",
+    "short_text": "Servicio de mapeo de números de programa RPC a puertos de red DARPA.",
+    "long_text": "Permite a clientes remotos localizar servicios como NFS en el host local.",
+    "category": "network",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "rpc.statd",
+    "short_text": "Demonio de monitorización de estado de bloqueo de archivos para NFS.",
+    "long_text": "Notifica a clientes y servidores sobre reinicios para recuperar cerrojos de archivos.",
+    "category": "network",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "rpc.mountd",
+    "short_text": "Demonio del servidor NFS para responder a solicitudes de montaje de red.",
+    "long_text": "Valida permisos de exportación antes de permitir el acceso al sistema de archivos NFS.",
+    "category": "network",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "nfsd",
+    "short_text": "Demonio del servidor de sistema de archivos en red (Network File System).",
+    "long_text": "Atiende solicitudes de lectura y escritura de clientes NFS conectados en la red.",
+    "category": "network",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "udisksd",
+    "short_text": "Demonio de gestión de dispositivos de almacenamiento en disco y bloques.",
+    "long_text": "Ofrece interfaces D-Bus para particionar, formatear y montar unidades de disco.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "snapd",
+    "short_text": "Demonio de gestión de aplicaciones y entornos aislados Snap.",
+    "long_text": "Controla el ciclo de vida, montajes SquashFS y actualizaciones de paquetes Snap.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "packagekitd",
+    "short_text": "Demonio de abstracción de gestión de paquetes del sistema.",
+    "long_text": "Permite a interfaces gráficas buscar, instalar y actualizar software vía D-Bus.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "unattended-upgr",
+    "short_text": "Servicio de instalación automática de parches y actualizaciones de seguridad.",
+    "long_text": "Descarga e instala paquetes críticos sin requerir intervención interactiva del usuario.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "apparmor_parser",
+    "short_text": "Cargador y analizador de perfiles de confinamiento de seguridad AppArmor.",
+    "long_text": "Compila y carga en el kernel las reglas de acceso obligatorio para binarios protegidos.",
+    "category": "security",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "gnome-shell",
+    "short_text": "Interfaz gráfica, compositor y shell del entorno de escritorio GNOME.",
+    "long_text": "Controla la interfaz visual, panel superior, lanzadores y efectos visuales de GNOME.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "mutter",
+    "short_text": "Gestor de ventanas y compositor Wayland/X11 de GNOME.",
+    "long_text": "Renderiza el marco de las ventanas y coordina el dibujado con el servidor gráfico.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "gdm3",
+    "short_text": "Gestor de inicio de sesión gráfico de GNOME (Display Manager).",
+    "long_text": "Muestra la pantalla de bienvenida y autenticación previa al inicio de sesión de usuario.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "gvfsd",
+    "short_text": "Demonio del sistema de archivos virtual de GNOME (GVFS).",
+    "long_text": "Gestiona protocolos como SFTP, SMB, WebDAV y dispositivos móviles en el entorno gráfico.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "gvfsd-fuse",
+    "short_text": "Interfaz FUSE para exponer montajes GVFS en el sistema de archivos.",
+    "long_text": "Monta recursos virtuales en /run/user/<uid>/gvfs para aplicaciones tradicionales sin soporte GIO.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "gvfsd-metadata",
+    "short_text": "Demonio de persistencia de metadatos de archivos para GVFS.",
+    "long_text": "Guarda atributos como emblemas, posiciones de iconos y visualizaciones en el escritorio.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "gvfs-udisks2-volume-monitor",
+    "short_text": "Monitor de volúmenes de disco udisks2 para GVFS.",
+    "long_text": "Detecta inserción y desconexión de unidades USB y particiones de disco en el escritorio.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "gvfs-afc-volume-monitor",
+    "short_text": "Monitor de dispositivos Apple iOS (AFC) para GVFS.",
+    "long_text": "Supervisa la conexión USB de teléfonos y tabletas Apple para transferencia de medios.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "gvfs-gphoto2-volume-monitor",
+    "short_text": "Monitor de cámaras digitales (GPhoto2) para GVFS.",
+    "long_text": "Detecta cámaras fotográficas conectadas mediante protocolo PTP/MTP.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "gnome-session-binary",
+    "short_text": "Gestor de sesión gráfica de usuario en GNOME.",
+    "long_text": "Inicia los componentes del entorno de escritorio y supervisa su cierre ordenado.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "gnome-terminal-server",
+    "short_text": "Servidor de instancias de emulador de terminal GNOME Terminal.",
+    "long_text": "Aloja las pestañas y ventanas de GNOME Terminal ahorrando memoria por proceso compartido.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "nautilus",
+    "short_text": "Administrador de archivos oficial del entorno GNOME (Archivos).",
+    "long_text": "Proporciona navegación visual por carpetas, operaciones de archivos y vistas previas.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "gnome-control-center",
+    "short_text": "Panel de configuración y preferencias del sistema GNOME.",
+    "long_text": "Interfaz de ajustes para redes, pantallas, sonido, usuarios y privacidad.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "gsd-color",
+    "short_text": "Plugin de gestión de color de GNOME Settings Daemon.",
+    "long_text": "Aplica perfiles de calibración de color a monitores y dispositivos de imagen.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "gsd-keyboard",
+    "short_text": "Plugin de ajustes de teclado de GNOME Settings Daemon.",
+    "long_text": "Configura mapas de teclado, repetición de teclas y variantes regionales en la sesión.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "gsd-media-keys",
+    "short_text": "Plugin de teclas multimedia de GNOME Settings Daemon.",
+    "long_text": "Responde a teclas de volumen, brillo, captura de pantalla y reproducción.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "gsd-power",
+    "short_text": "Plugin de políticas de energía de GNOME Settings Daemon.",
+    "long_text": "Gestiona apagado de pantalla por inactividad, suspensión automática y modo batería.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "gsd-wacom",
+    "short_text": "Plugin de gestión de tabletas digitalizadoras Wacom en GNOME.",
+    "long_text": "Configura sensibilidad a la presión, botones del lápiz óptico y mapeo a monitores.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "gsd-xsettings",
+    "short_text": "Servidor de XSettings para compatibilidad gráfica en GNOME.",
+    "long_text": "Transmite fuentes, temas e iconos GTK a aplicaciones cliente X11 tradicionales.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "tracker-miner-fs-3",
+    "short_text": "Indexador de archivos locales del motor de búsqueda Tracker 3.",
+    "long_text": "Examina carpetas personales para indexar documentos y contenido para búsqueda rápida.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "tracker-extract-3",
+    "short_text": "Extractor de metadatos de archivos multimedia para Tracker 3.",
+    "long_text": "Lee etiquetas EXIF de fotos, ID3 de música y textos de archivos PDF.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "evolution-data-server",
+    "short_text": "Servidor centralizado de libretas de direcciones y calendarios.",
+    "long_text": "Mantiene sincronizados eventos y contactos para aplicaciones de GNOME.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "evolution-calendar-factory",
+    "short_text": "Fábrica de backend de calendarios de Evolution.",
+    "long_text": "Atiende consultas de eventos de calendario de aplicaciones cliente.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "evolution-addressbook-factory",
+    "short_text": "Fábrica de backend de contactos de Evolution.",
+    "long_text": "Atiende consultas de libreta de direcciones locales y remotas.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "xdg-desktop-portal",
+    "short_text": "Capa central de portales de escritorio XDG para aplicaciones aisladas.",
+    "long_text": "Intermedia diálogos de archivos, capturas de pantalla y notificaciones para Flatpak/Snap.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "xdg-desktop-portal-gnome",
+    "short_text": "Implementación específica de GNOME para portales de escritorio XDG.",
+    "long_text": "Muestra los diálogos nativos de GNOME cuando una app aislada solicita acceso al sistema.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "xdg-desktop-portal-gtk",
+    "short_text": "Implementación GTK genérica para portales de escritorio XDG.",
+    "long_text": "Provee diálogos estándar GTK en entornos de escritorio sin backend dedicado.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "xdg-permission-store",
+    "short_text": "Almacén de permisos de aplicaciones Flatpak y portales XDG.",
+    "long_text": "Guarda qué aplicaciones aisladas tienen autorización para abrir la cámara o leer carpetas.",
+    "category": "security",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "xdg-document-portal",
+    "short_text": "Portal de acceso seguro a documentos para aplicaciones aisladas.",
+    "long_text": "Expone archivos específicos de forma aislada a través de un sistema de archivos FUSE.",
+    "category": "security",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "kwin_wayland",
+    "short_text": "Gestor de ventanas y compositor Wayland para KDE Plasma.",
+    "long_text": "Renderiza ventanas, decoraciones y efectos gráficos en sesiones KDE Wayland.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "kwin_x11",
+    "short_text": "Gestor de ventanas y compositor X11 para KDE Plasma.",
+    "long_text": "Coordina el posicionamiento y efectos visuales de ventanas en sesiones KDE X11.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "plasmashell",
+    "short_text": "Entorno gráfico, paneles y escritorio de KDE Plasma.",
+    "long_text": "Dibuja el fondo de escritorio, widgets, menús y barra de tareas de KDE.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "sddm",
+    "short_text": "Gestor de inicio de sesión gráfico (Simple Desktop Display Manager).",
+    "long_text": "Pantalla de bienvenida y selección de sesión preferida en entornos KDE Plasma y LXQt.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "kded5",
+    "short_text": "Demonio de servicios en segundo plano de KDE Frameworks 5.",
+    "long_text": "Ejecuta módulos auxiliares para monitorización de red, brillo y atajos en KDE 5.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "kded6",
+    "short_text": "Demonio de servicios en segundo plano de KDE Frameworks 6.",
+    "long_text": "Ejecuta módulos auxiliares del sistema en entornos modernos de KDE Plasma 6.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "ksmserver",
+    "short_text": "Gestor de sesión de usuario en KDE Plasma.",
+    "long_text": "Coordina el guardado de estado de aplicaciones y el cierre de sesión en KDE.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "krunner",
+    "short_text": "Lanzador rápido de aplicaciones y utilidades de búsqueda en KDE.",
+    "long_text": "Permite abrir programas, calcular operaciones matemáticas y buscar archivos.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "kglobalaccel5",
+    "short_text": "Demonio gestor de atajos de teclado globales en KDE Plasma.",
+    "long_text": "Registra y despacha combinaciones de teclas globales en el escritorio KDE.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "dolphin",
+    "short_text": "Administrador de archivos oficial del entorno KDE Plasma.",
+    "long_text": "Explorador visual con paneles divididos, terminal integrada y soporte para red.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "konsole",
+    "short_text": "Emulador de terminal avanzado del entorno KDE Plasma.",
+    "long_text": "Proporciona ventanas de consola con soporte para múltiples perfiles y pestañas.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "xfce4-session",
+    "short_text": "Gestor de sesión de usuario del entorno de escritorio XFCE.",
+    "long_text": "Inicia los procesos esenciales y restaura aplicaciones abiertas en XFCE.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "xfwm4",
+    "short_text": "Gestor de ventanas ligero del entorno de escritorio XFCE.",
+    "long_text": "Administra el posicionamiento, bordes y composición visual en XFCE.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "xfce4-panel",
+    "short_text": "Barra de tareas y panel de aplicaciones de XFCE.",
+    "long_text": "Contiene los lanzadores, reloj, bandeja del sistema y lista de ventanas.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "xfdesktop",
+    "short_text": "Administrador del fondo de escritorio e iconos de XFCE.",
+    "long_text": "Muestra fondos de pantalla y organiza los accesos directos del escritorio.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "lightdm",
+    "short_text": "Gestor de inicio de sesión gráfico ligero y modular (LightDM).",
+    "long_text": "Atiende la pantalla de login para escritorios ligeros como XFCE, MATE y Cinnamon.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "Xorg",
+    "short_text": "Servidor de visualización clásico X11 (X.Org).",
+    "long_text": "Gestiona adaptadores de gráficos, pantallas, teclados y ratones para clientes X11.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "Xwayland",
+    "short_text": "Servidor X11 emulado para compatibilidad de aplicaciones en Wayland.",
+    "long_text": "Permite ejecutar software diseñado para X11 dentro de un compositor Wayland nativo.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "waybar",
+    "short_text": "Barra de estado altamente personalizable para compositores Wayland.",
+    "long_text": "Muestra información del sistema para compositores en mosaico como Sway y Hyprland.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "sway",
+    "short_text": "Compositor de ventanas en mosaico (tiling) compatible con i3 para Wayland.",
+    "long_text": "Organiza automáticamente las ventanas en pantalla de forma eficiente sin solaparse.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "i3",
+    "short_text": "Gestor de ventanas en mosaico (tiling) para X11 enfocado en teclado.",
+    "long_text": "Permite navegación ultrarrápida entre aplicaciones minimizando el uso del ratón.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "picom",
+    "short_text": "Compositor independiente de efectos de transparencia y sombras para X11.",
+    "long_text": "Añade desenfoques, sombras y sincronización vertical para evitar cortes de imagen (tearing).",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "dunst",
+    "short_text": "Demonio de notificaciones de escritorio minimalista y ligero.",
+    "long_text": "Muestra alertas en pantalla consumiendo una cantidad mínima de memoria y recursos.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "rofi",
+    "short_text": "Lanzador de aplicaciones, selector de ventanas y menú para consola gráfica.",
+    "long_text": "Proporciona un diálogo emergente interactivo para ejecutar órdenes y conmutar ventanas.",
+    "category": "desktop",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "pipewire",
+    "short_text": "Servidor multimedia de procesamiento de audio y vídeo de baja latencia.",
+    "long_text": "Infraestructura moderna de enrutamiento y captura de flujos multimedia en Linux.",
+    "category": "multimedia",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "pipewire-pulse",
+    "short_text": "Capa de compatibilidad con clientes de PulseAudio sobre PipeWire.",
+    "long_text": "Permite a aplicaciones tradicionales de PulseAudio emitir sonido a través de PipeWire.",
+    "category": "multimedia",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "wireplumber",
+    "short_text": "Gestor de políticas y sesiones multimedia modular para PipeWire.",
+    "long_text": "Administra el enlace de dispositivos de entrada/salida y niveles de volumen.",
+    "category": "multimedia",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "pipewire-media-session",
+    "short_text": "Gestor de sesiones multimedia clásico para PipeWire.",
+    "long_text": "Controlador básico de sesiones y dispositivos de sonido previo a WirePlumber.",
+    "category": "multimedia",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "pulseaudio",
+    "short_text": "Servidor de sonido avanzado tradicional para sistemas de escritorio POSIX.",
+    "long_text": "Mezcla pistas de audio por software y gestiona tarjetas de sonido y Bluetooth.",
+    "category": "multimedia",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "alsactl",
+    "short_text": "Herramienta de control y restauración de estados del subsistema ALSA.",
+    "long_text": "Guarda y recupera los niveles de volumen de hardware definidos en el kernel ALSA.",
+    "category": "multimedia",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "jackd",
+    "short_text": "Servidor de audio JACK de conexión cruzada y latencia ultra baja.",
+    "long_text": "Diseñado para producción musical profesional y procesamiento de señales en tiempo real.",
+    "category": "multimedia",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "mpv",
+    "short_text": "Reproductor multimedia de alto rendimiento en línea de comandos.",
+    "long_text": "Decodifica flujos de audio y vídeo mediante aceleración por hardware con libmpv.",
+    "category": "multimedia",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "vlc",
+    "short_text": "Reproductor multimedia universal de código abierto (VLC).",
+    "long_text": "Reproduce la práctica totalidad de formatos de audio y vídeo con códecs integrados.",
+    "category": "multimedia",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "ffmpeg",
+    "short_text": "Suite integral de conversión, transcodificación y filtrado multimedia.",
+    "long_text": "Herramienta intensiva en CPU/GPU para procesar flujos de audio y vídeo.",
+    "category": "multimedia",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "obs64",
+    "short_text": "Suite de transmisión y grabación de vídeo en vivo (OBS Studio).",
+    "long_text": "Captura pantallas, cámaras y micrófonos para emisión por streaming o archivo local.",
+    "category": "multimedia",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "firefox",
+    "short_text": "Navegador web de código abierto Mozilla Firefox.",
+    "long_text": "Utiliza el motor Gecko; divide el renderizado en múltiples procesos de contenido aislados.",
+    "category": "browser",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "firefox-bin",
+    "short_text": "Binario de ejecución principal de Mozilla Firefox.",
+    "long_text": "Proceso nativo empaquetado responsable de la ejecución del navegador Firefox.",
+    "category": "browser",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "chrome",
+    "short_text": "Navegador web Google Chrome.",
+    "long_text": "Motor Chromium con sandbox multiproceso para pestañas, extensiones y aceleración GPU.",
+    "category": "browser",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "google-chrome",
+    "short_text": "Navegador web Google Chrome (lanzador estándar en Linux).",
+    "long_text": "Proceso raíz del navegador Chrome que coordina los procesos hijos de renderizado.",
+    "category": "browser",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "google-chrome-stable",
+    "short_text": "Canal estable de Google Chrome para sistemas Linux.",
+    "long_text": "Versión de producción de Chrome distribuida oficialmente mediante repositorios deb.",
+    "category": "browser",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "chromium",
+    "short_text": "Navegador web de código abierto Chromium.",
+    "long_text": "Base libre y abierta sobre la que se construyen navegadores como Chrome, Edge y Brave.",
+    "category": "browser",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "chromium-browser",
+    "short_text": "Variante de Chromium empaquetada en distribuciones Linux.",
+    "long_text": "Paquete nativo o Snap de Chromium habitual en instalaciones de Ubuntu y Debian.",
+    "category": "browser",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "brave",
+    "short_text": "Navegador web Brave enfocado en privacidad.",
+    "long_text": "Basado en Chromium con escudos nativos de bloqueo de rastreadores y anuncios.",
+    "category": "browser",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "msedge",
+    "short_text": "Navegador web Microsoft Edge para Linux.",
+    "long_text": "Navegador basado en el motor Chromium adaptado por Microsoft.",
+    "category": "browser",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "opera",
+    "short_text": "Navegador web Opera.",
+    "long_text": "Navegador basado en Chromium con utilidades integradas de mensajería lateral y VPN.",
+    "category": "browser",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "tor",
+    "short_text": "Demonio y cliente de enrutamiento cebolla para anonimato de red (Tor).",
+    "long_text": "Canaliza conexiones a través de circuitos cifrados aleatorios de nodos voluntarios.",
+    "category": "network",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "bash",
+    "short_text": "Intérprete de comandos estándar de GNU (Bourne Again Shell).",
+    "long_text": "Shell interactivo común para scripts de automatización y administración del sistema.",
+    "category": "shell",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "zsh",
+    "short_text": "Intérprete de comandos interactivo avanzado Z Shell.",
+    "long_text": "Shell potente con auto-completado contextual extensible mediante temas y plugins.",
+    "category": "shell",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "sh",
+    "short_text": "Intérprete de comandos estándar POSIX de compatibilidad.",
+    "long_text": "En Debian/Ubuntu suele ser un enlace a dash para máxima velocidad en scripts del sistema.",
+    "category": "shell",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "fish",
+    "short_text": "Intérprete de comandos interactivo amigable (Friendly Interactive Shell).",
+    "long_text": "Shell con sugerencias en tiempo real basadas en historial y coloreado de sintaxis.",
+    "category": "shell",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "dash",
+    "short_text": "Intérprete de comandos POSIX ultraligero (Debian Almquist Shell).",
+    "long_text": "Optimizado para ejecución rápida de scripts de arranque y mantenimiento del sistema.",
+    "category": "shell",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "tmux",
+    "short_text": "Multiplexor de terminales y gestor de sesiones de línea de comandos.",
+    "long_text": "Mantiene sesiones activas en segundo plano accesibles desde múltiples conexiones remotas.",
+    "category": "development",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "screen",
+    "short_text": "Multiplexor de terminales clásico de GNU para sesiones remotas.",
+    "long_text": "Permite separar y reanudar sesiones de terminal de consola en servidores.",
+    "category": "development",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "python",
+    "short_text": "Intérprete del lenguaje de programación Python.",
+    "long_text": "Entorno de ejecución de scripts y aplicaciones desarrolladas en lenguaje Python.",
+    "category": "development",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "python3",
+    "short_text": "Intérprete oficial del lenguaje de programación Python 3.",
+    "long_text": "Ejecuta scripts y bibliotecas modernas del ecosistema Python 3 en el sistema.",
+    "category": "development",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "node",
+    "short_text": "Entorno de ejecución de JavaScript del lado del servidor (Node.js).",
+    "long_text": "Ejecuta microservicios, herramientas de compilación y servidores basados en motor V8.",
+    "category": "development",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "ruby",
+    "short_text": "Intérprete del lenguaje de programación dinámico Ruby.",
+    "long_text": "Ejecuta scripts y aplicaciones web como Ruby on Rails.",
+    "category": "development",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "perl",
+    "short_text": "Intérprete del lenguaje de programación y procesamiento de texto Perl.",
+    "long_text": "Utilizado por herramientas clave del sistema como debconf y dpkg en distribuciones Debian.",
+    "category": "development",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "php",
+    "short_text": "Intérprete de línea de comandos del lenguaje de desarrollo web PHP.",
+    "long_text": "Ejecuta aplicaciones web y herramientas de consola escritas en PHP.",
+    "category": "development",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "lua",
+    "short_text": "Intérprete ligero y embebible del lenguaje de programación Lua.",
+    "long_text": "Frecuentemente utilizado para configuración y scripting en Neovim y herramientas de red.",
+    "category": "development",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "java",
+    "short_text": "Máquina virtual de ejecución para aplicaciones Java (JVM / OpenJDK).",
+    "long_text": "Ejecuta bytecode compilado de aplicaciones empresariales y servicios Java.",
+    "category": "development",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "javac",
+    "short_text": "Compilador oficial del lenguaje de programación Java.",
+    "long_text": "Transforma código fuente .java en archivos de bytecode ejecutable .class.",
+    "category": "development",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "rustc",
+    "short_text": "Compilador del lenguaje de programación de sistemas Rust.",
+    "long_text": "Compila código Rust a binarios de máquina seguros con optimizaciones LLVM.",
+    "category": "development",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "cargo",
+    "short_text": "Gestor de paquetes y sistema de construcción oficial para Rust.",
+    "long_text": "Descarga dependencias de crates.io y orquesta la compilación de proyectos en Rust.",
+    "category": "development",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "gcc",
+    "short_text": "Compilador de la colección GNU Compiler Collection para lenguaje C.",
+    "long_text": "Traduce código fuente en lenguaje C a código máquina binario nativo.",
+    "category": "development",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "g++",
+    "short_text": "Compilador de la colección GNU Compiler Collection para lenguaje C++.",
+    "long_text": "Compila y enlaza programas escritos en lenguaje C++ con las bibliotecas estándar libstdc++.",
+    "category": "development",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "clang",
+    "short_text": "Compilador para lenguajes C y C++ basado en la infraestructura LLVM.",
+    "long_text": "Proporciona diagnósticos rápidos de errores de sintaxis y generación de código optimizado.",
+    "category": "development",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "clang++",
+    "short_text": "Compilador para lenguaje C++ basado en la infraestructura LLVM.",
+    "long_text": "Compila proyectos C++ modernos utilizando el backend optimizador de LLVM.",
+    "category": "development",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "make",
+    "short_text": "Herramienta de automatización de compilación y construcción de GNU.",
+    "long_text": "Determina qué partes de un programa requieren recompilación a partir de archivos Makefile.",
+    "category": "development",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "cmake",
+    "short_text": "Generador de sistemas de compilación multiplataforma (CMake).",
+    "long_text": "Genera archivos para Make, Ninja o IDEs a partir de especificaciones CMakeLists.txt.",
+    "category": "development",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "ninja",
+    "short_text": "Sistema de compilación enfocado primordialmente en la velocidad.",
+    "long_text": "Ejecuta grafos de compilación generados por CMake o Meson con máxima concurrencia.",
+    "category": "development",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "git",
+    "short_text": "Sistema de control de versiones distribuido Git.",
+    "long_text": "Registra el historial de cambios, ramas y fusiones en proyectos de desarrollo de software.",
+    "category": "development",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "code",
+    "short_text": "Editor de código fuente Visual Studio Code de Microsoft.",
+    "long_text": "Entorno de desarrollo basado en Electron con soporte para depuración y extensiones.",
+    "category": "development",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "code-oss",
+    "short_text": "Versión comunitaria de código abierto de Visual Studio Code.",
+    "long_text": "Compilación limpia de VS Code distribuida en paquetes libres de Linux.",
+    "category": "development",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "cursor",
+    "short_text": "Editor de código fuente asistido por IA basado en VS Code.",
+    "long_text": "Editor con herramientas de análisis de código y asistencia inteligente integrada.",
+    "category": "development",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "nvim",
+    "short_text": "Editor de texto modal extensible Neovim.",
+    "long_text": "Reimplementación moderna de Vim enfocada en extensibilidad, plugins Lua y LSP.",
+    "category": "development",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "vim",
+    "short_text": "Editor de texto modal clásico mejorado (Vi IMproved).",
+    "long_text": "Editor de consola con comandos eficientes para edición y manipulación de texto.",
+    "category": "development",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "nano",
+    "short_text": "Editor de texto sencillo para terminal de consola de GNU.",
+    "long_text": "Editor intuitivo en línea de comandos habitual para cambios rápidos de configuración.",
+    "category": "development",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "emacs",
+    "short_text": "Editor de texto avanzado y entorno extensible GNU Emacs.",
+    "long_text": "Entorno programable en Emacs Lisp con soporte para edición, correo y gestión de tareas.",
+    "category": "development",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "gdb",
+    "short_text": "Depurador de programas interactivo del proyecto GNU.",
+    "long_text": "Inspecciona la ejecución, variables, memoria y llamadas a funciones de binarios en C/C++.",
+    "category": "development",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "valgrind",
+    "short_text": "Herramienta de análisis dinámico y detección de fugas de memoria.",
+    "long_text": "Supervisa punteros de memoria, accesos inválidos y uso de heap en programas compilados.",
+    "category": "development",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "strace",
+    "short_text": "Rastreador de llamadas al sistema y señales del kernel.",
+    "long_text": "Diagnostica problemas de ejecución mostrando las llamadas al sistema (syscalls) en tiempo real.",
+    "category": "development",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "ltrace",
+    "short_text": "Rastreador de llamadas a funciones de bibliotecas dinámicas compartidas.",
+    "long_text": "Intercepta llamadas a funciones de bibliotecas de enlace dinámico en binarios de usuario.",
+    "category": "development",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "dockerd",
+    "short_text": "Demonio principal del motor de contenedores Docker Engine.",
+    "long_text": "Gestiona imágenes, contenedores, redes virtuales y volúmenes de almacenamiento Docker.",
+    "category": "container",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "docker",
+    "short_text": "Cliente de línea de comandos para control del daemon Docker.",
+    "long_text": "Envía comandos a la API REST del demonio dockerd para crear y correr contenedores.",
+    "category": "container",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "containerd",
+    "short_text": "Runtime de contenedores estándar del ecosistema CNCF.",
+    "long_text": "Supervisa el ciclo de vida completo de contenedores en sistemas Linux y Kubernetes.",
+    "category": "container",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "containerd-shim",
+    "short_text": "Proceso puente que mantiene vivo el contenedor ante reinicios del daemon.",
+    "long_text": "Desacopla el proceso del contenedor respecto al daemon containerd para evitar caídas.",
+    "category": "container",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "containerd-shim-runc-v2",
+    "short_text": "Shim de containerd para la especificación OCI v2.",
+    "long_text": "Conecta la API de containerd con el ejecutor runc para instancias de contenedores.",
+    "category": "container",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "runc",
+    "short_text": "Herramienta de bajo nivel para generar y ejecutar contenedores OCI.",
+    "long_text": "Configura namespaces del kernel, cgroups y capacidades antes de transferir el control.",
+    "category": "container",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "podman",
+    "short_text": "Motor de contenedores sin demonio (daemonless) compatible con Docker.",
+    "long_text": "Permite crear y ejecutar contenedores OCI sin privilegios de root (rootless).",
+    "category": "container",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "conmon",
+    "short_text": "Monitor ligero de contenedores OCI para Podman y CRI-O.",
+    "long_text": "Monitorea la salida estándar, salida de error y código de salida del contenedor.",
+    "category": "container",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "crio",
+    "short_text": "Runtime de contenedores ligero optimizado para Kubernetes (CRI-O).",
+    "long_text": "Implementa la interfaz Container Runtime Interface (CRI) de Kubernetes de forma directa.",
+    "category": "container",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "kubelet",
+    "short_text": "Agente primario de nodo en clústeres de Kubernetes.",
+    "long_text": "Asegura que los contenedores descritos en los PodSpecs estén corriendo y saludables.",
+    "category": "container",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "kube-proxy",
+    "short_text": "Demonio de red y balanceo de servicios en nodos de Kubernetes.",
+    "long_text": "Programa reglas iptables o IPVS para enrutar tráfico hacia pods de destino.",
+    "category": "container",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "qemu-system-x86_64",
+    "short_text": "Emulador de hardware y máquina virtual QEMU para arquitectura x86_64.",
+    "long_text": "Ejecuta sistemas operativos invitados con aceleración por hardware KVM en Linux.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "libvirtd",
+    "short_text": "Demonio de gestión de virtualización de libvirt.",
+    "long_text": "Ofrece APIs unificadas para controlar máquinas virtuales KVM, Xen y redes virtuales.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "virtlogd",
+    "short_text": "Demonio de gestión de registros de consola de máquinas virtuales libvirt.",
+    "long_text": "Mantiene las bitácoras de consolas de invitados virtuales de forma segura.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "vboxwebsrv",
+    "short_text": "Servidor web de gestión remota para Oracle VirtualBox.",
+    "long_text": "Proporciona interfaces SOAP para controlar máquinas virtuales en red.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "VBoxHeadless",
+    "short_text": "Ejecutor de máquinas virtuales VirtualBox sin interfaz gráfica.",
+    "long_text": "Permite correr servidores virtuales en segundo plano accesibles vía VRDP.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "multipassd",
+    "short_text": "Demonio de gestión de instancias de máquinas virtuales Ubuntu Multipass.",
+    "long_text": "Crea y orquesta rápidamente instancias de Ubuntu en la nube local del desarrollador.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "mysqld",
+    "short_text": "Demonio del servidor de base de datos relacional MySQL.",
+    "long_text": "Gestiona tablas InnoDB, transacciones ACID, índices y conexiones cliente SQL.",
+    "category": "database",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "mariadbd",
+    "short_text": "Demonio del servidor de base de datos relacional MariaDB.",
+    "long_text": "Bifurcación de código abierto de MySQL orientada a alta concurrencia y rendimiento.",
+    "category": "database",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "postgres",
+    "short_text": "Proceso principal del motor de base de datos relacional PostgreSQL.",
+    "long_text": "Servidor SQL avanzado orientado a objetos con soporte ACID y tipos de datos complejos.",
+    "category": "database",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "redis-server",
+    "short_text": "Servidor de estructuras de datos en memoria RAM (Redis).",
+    "long_text": "Almacén en caché clave-valor de ultrabaja latencia con persistencia opcional a disco.",
+    "category": "database",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "memcached",
+    "short_text": "Sistema de caché en memoria distribuida de objetos de alto rendimiento.",
+    "long_text": "Acelera aplicaciones web dinámicas aliviando la carga de consultas sobre bases de datos.",
+    "category": "database",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "mongod",
+    "short_text": "Demonio principal del motor de base de datos documental MongoDB.",
+    "long_text": "Almacena y consulta colecciones de documentos JSON binarios (BSON) con escalabilidad.",
+    "category": "database",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "clickhouse-server",
+    "short_text": "Servidor de base de datos analítica orientada a columnas ClickHouse.",
+    "long_text": "Optimizado para consultas analíticas masivas en tiempo real sobre miles de millones de filas.",
+    "category": "database",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "etcd",
+    "short_text": "Almacén clave-valor distribuido y consistente para metadatos de clúster.",
+    "long_text": "Utiliza el algoritmo de consenso Raft para guardar la configuración de Kubernetes.",
+    "category": "database",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "cockroach",
+    "short_text": "Nodo del motor de base de datos relacional distribuida CockroachDB.",
+    "long_text": "Base de datos SQL con consistencia fuerte y tolerancia a fallos por partición.",
+    "category": "database",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "influxd",
+    "short_text": "Demonio del motor de base de datos de series temporales InfluxDB.",
+    "long_text": "Especializado en almacenar métricas de monitorización de infraestructura e IoT.",
+    "category": "database",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "nginx",
+    "short_text": "Servidor web HTTP y proxy inverso de alto rendimiento Nginx.",
+    "long_text": "Maneja conexiones concurrentes asíncronas para servir estáticos y balancear carga.",
+    "category": "network",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "apache2",
+    "short_text": "Servidor web HTTP clásico Apache en distribuciones Debian/Ubuntu.",
+    "long_text": "Servidor web modular compatible con .htaccess y múltiples módulos de procesamiento.",
+    "category": "network",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "httpd",
+    "short_text": "Servidor web HTTP Apache en distribuciones basadas en RHEL/Fedora.",
+    "long_text": "Servidor de contenido web estándar en la familia de distribuciones empresariales.",
+    "category": "network",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "caddy",
+    "short_text": "Servidor web moderno con certificados HTTPS automáticos (Caddy).",
+    "long_text": "Escrito en Go, obtiene y renueva certificados Let's Encrypt de forma autónoma.",
+    "category": "network",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "traefik",
+    "short_text": "Enrutador de borde y proxy inverso para contenedores y microservicios.",
+    "long_text": "Descubre servicios automáticamente conectándose a la API de Docker o Kubernetes.",
+    "category": "network",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "envoy",
+    "short_text": "Proxy de servicio y comunicación de red de alta eficiencia.",
+    "long_text": "Diseñado para arquitecturas de malla de servicios (Service Mesh) como Istio.",
+    "category": "network",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "haproxy",
+    "short_text": "Balanceador de carga y proxy inverso TCP/HTTP de alta disponibilidad.",
+    "long_text": "Distribuye solicitudes de red entre granjas de servidores con muy bajo consumo de CPU.",
+    "category": "network",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "squid",
+    "short_text": "Servidor proxy con caché para protocolos web HTTP, HTTPS y FTP.",
+    "long_text": "Reduce consumo de ancho de banda y permite aplicar políticas de filtrado en red.",
+    "category": "network",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "privoxy",
+    "short_text": "Servidor proxy web con filtrado de privacidad y bloqueo de anuncios.",
+    "long_text": "Modifica encabezados HTTP y bloquea rastreadores antes de entregar páginas al navegador.",
+    "category": "network",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "sshd",
+    "short_text": "Demonio del servidor de acceso remoto seguro OpenSSH.",
+    "long_text": "Autentica usuarios y establece sesiones cifradas de consola y túneles SFTP/port forwarding.",
+    "category": "network",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "ssh",
+    "short_text": "Cliente de conexión segura por terminal OpenSSH.",
+    "long_text": "Inicia sesiones remotas cifradas hacia servidores con soporte para llaves públicas.",
+    "category": "network",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "ssh-agent",
+    "short_text": "Agente de autenticación y retención de claves privadas SSH.",
+    "long_text": "Mantiene claves privadas descifradas en memoria para no pedir contraseña en cada conexión.",
+    "category": "security",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "sssd",
+    "short_text": "Demonio del servicio de seguridad del sistema (System Security Services Daemon).",
+    "long_text": "Conecta sistemas Linux con directorios remotos LDAP, Active Directory y FreeIPA.",
+    "category": "security",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "sssd_be",
+    "short_text": "Backend de comunicación con proveedores de identidad de SSSD.",
+    "long_text": "Mantiene la caché local de credenciales y consulta dominios corporativos.",
+    "category": "security",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "sssd_nss",
+    "short_text": "Módulo de conmutación de servicios de nombres (NSS) para SSSD.",
+    "long_text": "Responde a consultas del sistema para resolver usuarios y grupos de red.",
+    "category": "security",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "sssd_pam",
+    "short_text": "Módulo de autenticación conectable (PAM) para SSSD.",
+    "long_text": "Valida contraseñas y tokens Kerberos cuando los usuarios inician sesión.",
+    "category": "security",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "NetworkManager",
+    "short_text": "Demonio de detección y configuración automática de conexiones de red.",
+    "long_text": "Administra conexiones cableadas, redes Wi-Fi, VPNs y módems de banda ancha.",
+    "category": "network",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "wpa_supplicant",
+    "short_text": "Cliente negociador de autenticación y seguridad para redes Wi-Fi.",
+    "long_text": "Gestiona claves WPA, WPA2 y WPA3 Enterprise en adaptadores de red inalámbricos.",
+    "category": "network",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "modem-manager",
+    "short_text": "Demonio de control de módems celulares y banda ancha móvil.",
+    "long_text": "Proporciona interfaces D-Bus para gestionar conexiones 4G/5G y envío de SMS.",
+    "category": "network",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "dnsmasq",
+    "short_text": "Servidor ligero de reenvío DNS, DHCP y anuncio de routers.",
+    "long_text": "Provee resolución DNS local rápida y asignación de IPs en redes locales y contenedores.",
+    "category": "network",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "named",
+    "short_text": "Demonio del servidor de nombres de dominio de Internet (BIND 9).",
+    "long_text": "Servidor DNS autoritativo y recursivo ampliamente utilizado en infraestructura de Internet.",
+    "category": "network",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "unbound",
+    "short_text": "Servidor DNS validador y recursivo con caché de alta seguridad.",
+    "long_text": "Diseñado para resolución DNS rápida y segura con soporte estricto de DNSSEC.",
+    "category": "network",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "openvpn",
+    "short_text": "Demonio de red privada virtual cifrada (OpenVPN).",
+    "long_text": "Establece túneles seguros punto a punto mediante protocolos SSL/TLS.",
+    "category": "network",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "wireguard",
+    "short_text": "Módulo y herramientas de red privada virtual rápida WireGuard.",
+    "long_text": "Túnel VPN moderno y ligero que opera directamente en el espacio del kernel Linux.",
+    "category": "network",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "tailscaled",
+    "short_text": "Demonio de red de malla segura punto a punto de Tailscale.",
+    "long_text": "Conecta dispositivos en una VPN privada basada en WireGuard sin abrir puertos.",
+    "category": "network",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "zerotier-one",
+    "short_text": "Demonio de red virtualizada global definida por software (ZeroTier).",
+    "long_text": "Crea redes Ethernet virtuales cifradas a través de Internet.",
+    "category": "network",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "avahi-daemon",
+    "short_text": "Demonio de descubrimiento de servicios mDNS/DNS-SD (Zeroconf).",
+    "long_text": "Permite encontrar impresoras, carpetas compartidas y hosts .local sin servidor DNS.",
+    "category": "network",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "cupsd",
+    "short_text": "Demonio del sistema de impresión común de UNIX (CUPS).",
+    "long_text": "Gestiona colas de impresión, controladores de impresora y solicitudes de red IPP.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "cups-browsed",
+    "short_text": "Demonio de descubrimiento e importación remota de colas CUPS.",
+    "long_text": "Explora la red local en busca de impresoras compartidas y crea colas locales automáticamente.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "smbd",
+    "short_text": "Demonio del servidor de archivos e impresión compatible con Windows (Samba).",
+    "long_text": "Atiende solicitudes de clientes SMB/CIFS para compartir carpetas en red local.",
+    "category": "network",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "nmbd",
+    "short_text": "Demonio del servidor de nombres NetBIOS para Samba.",
+    "long_text": "Responde a consultas de nombres de red NetBIOS para compatibilidad con Windows.",
+    "category": "network",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "winbindd",
+    "short_text": "Demonio unificador de autenticación de dominios Windows para Samba.",
+    "long_text": "Permite a usuarios de un dominio Active Directory autenticarse localmente en Linux.",
+    "category": "security",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "rsync",
+    "short_text": "Herramienta de sincronización y transferencia diferencial de archivos.",
+    "long_text": "Copia solo los bloques modificados entre archivos locales o a través de SSH.",
+    "category": "network",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "prometheus",
+    "short_text": "Servidor de monitorización y base de datos de series temporales.",
+    "long_text": "Recolecta métricas numéricas mediante sondeo HTTP y evalúa reglas de alerta.",
+    "category": "monitoring",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "node_exporter",
+    "short_text": "Exportador de métricas de hardware y sistema operativo para Prometheus.",
+    "long_text": "Expone estadísticas de CPU, memoria, discos y red en el endpoint /metrics.",
+    "category": "monitoring",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "grafana-server",
+    "short_text": "Servidor de paneles analíticos y visualización de métricas Grafana.",
+    "long_text": "Construye gráficos interactivos y alertas a partir de múltiples fuentes de datos.",
+    "category": "monitoring",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "telegraf",
+    "short_text": "Agente de recolección y reporte de métricas de servidor de InfluxData.",
+    "long_text": "Recolecta datos de bases de datos, colas y sensores para enviarlos a InfluxDB.",
+    "category": "monitoring",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "datadog-agent",
+    "short_text": "Agente de monitorización de infraestructura y aplicaciones Datadog.",
+    "long_text": "Recolecta métricas del host, trazas APM y logs para la plataforma SaaS Datadog.",
+    "category": "monitoring",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "filebeat",
+    "short_text": "Agente ligero de transporte de archivos de bitácora (Elastic Beats).",
+    "long_text": "Lee archivos de log del sistema y los reenvía de forma eficiente hacia Logstash o Elasticsearch.",
+    "category": "monitoring",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "fluentd",
+    "short_text": "Colector unificado de registros de eventos y bitácoras de código abierto.",
+    "long_text": "Filtra y almacena logs de múltiples fuentes en destinos analíticos estructurados.",
+    "category": "monitoring",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "zabbix_agentd",
+    "short_text": "Demonio de monitorización del agente Zabbix en el host local.",
+    "long_text": "Recoge estadísticas del sistema y atiende comprobaciones activas y pasivas de Zabbix Server.",
+    "category": "monitoring",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "fail2ban-server",
+    "short_text": "Demonio de prevención de intrusiones mediante análisis de bitácoras.",
+    "long_text": "Bloquea direcciones IP en el cortafuegos ante múltiples intentos fallidos de autenticación.",
+    "category": "security",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "clamd",
+    "short_text": "Demonio del motor de análisis antivirus de código abierto ClamAV.",
+    "long_text": "Examina archivos en busca de virus, troyanos y malware mediante base de firmas.",
+    "category": "security",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "apt",
+    "short_text": "Gestor de paquetes de alto nivel en distribuciones Debian y Ubuntu.",
+    "long_text": "Descarga, instala, actualiza y resuelve dependencias de paquetes de repositorios.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "apt-get",
+    "short_text": "Herramienta de gestión de paquetes de línea de comandos de APT.",
+    "long_text": "Utilidad de bajo nivel para automatización de instalación y actualización de software.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "dpkg",
+    "short_text": "Gestor de paquetes de bajo nivel para archivos .deb de Debian.",
+    "long_text": "Instala, extrae y elimina paquetes debian directamente sin resolver dependencias de red.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "flatpak",
+    "short_text": "Sistema de distribución y ejecución de aplicaciones aisladas para Linux.",
+    "long_text": "Ejecuta software de escritorio en entornos aislados con permisos controlados.",
+    "category": "system",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "pip",
+    "short_text": "Instalador y gestor de paquetes de software de Python.",
+    "long_text": "Descarga e instala paquetes y bibliotecas desde Python Package Index (PyPI).",
+    "category": "development",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "pipx",
+    "short_text": "Instalador de herramientas y aplicaciones Python en entornos aislados.",
+    "long_text": "Crea un virtualenv independiente para cada CLI sin contaminar el entorno global.",
+    "category": "development",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "slack",
+    "short_text": "Cliente de mensajería y colaboración en equipo Slack.",
+    "long_text": "Aplicación Electron para canales de chat, videollamadas e intercambio de archivos.",
+    "category": "productivity",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "discord",
+    "short_text": "Plataforma de comunicación por voz, vídeo y chat Discord.",
+    "long_text": "Aplicación basada en Chromium/Electron para comunidades y canales de voz.",
+    "category": "productivity",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "teams",
+    "short_text": "Cliente de colaboración y videollamadas Microsoft Teams.",
+    "long_text": "Plataforma corporativa de reuniones virtuales y mensajería en equipo.",
+    "category": "productivity",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "zoom",
+    "short_text": "Cliente de videoconferencias y reuniones virtuales Zoom.",
+    "long_text": "Transmite audio y vídeo interactivo en tiempo real con compresión optimizada.",
+    "category": "productivity",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "spotify",
+    "short_text": "Cliente de reproducción de música en streaming Spotify.",
+    "long_text": "Aplicación de escritorio con decodificación de audio y listas de reproducción locales.",
+    "category": "multimedia",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "thunderbird",
+    "short_text": "Cliente de correo electrónico y calendario Mozilla Thunderbird.",
+    "long_text": "Gestiona cuentas IMAP/POP3, libretas de contactos y feeds de noticias.",
+    "category": "productivity",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "libreoffice",
+    "short_text": "Suite ofimática y de productividad de código abierto LibreOffice.",
+    "long_text": "Editor de documentos de texto, hojas de cálculo, presentaciones y diagramas.",
+    "category": "productivity",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "soffice.bin",
+    "short_text": "Binario ejecutable del núcleo de la suite LibreOffice.",
+    "long_text": "Proceso responsable del motor de renderizado y cálculo de documentos de LibreOffice.",
+    "category": "productivity",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "calibre",
+    "short_text": "Gestor integral y lector de libros electrónicos Calibre.",
+    "long_text": "Convierte formatos de libros digitales, gestiona metadatos y sincroniza con lectores.",
+    "category": "productivity",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "gimp",
+    "short_text": "Programa de manipulación y retoque fotográfico digital (GIMP).",
+    "long_text": "Editor de gráficos rasterizados con soporte para capas, filtros y máscaras.",
+    "category": "productivity",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "inkscape",
+    "short_text": "Editor de gráficos vectoriales escalables (SVG) Inkscape.",
+    "long_text": "Herramienta de ilustración profesional basada en el estándar W3C SVG.",
+    "category": "productivity",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "blender",
+    "short_text": "Suite de modelado 3D, animación, simulación y renderizado Blender.",
+    "long_text": "Aplicación de creación de contenido tridimensional con aceleración completa por GPU.",
+    "category": "productivity",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "top",
+    "short_text": "Monitor interactivo de procesos y consumo de recursos en consola.",
+    "long_text": "Muestra tareas activas, uso de CPU por núcleo y consumo de memoria en tiempo real.",
+    "category": "utility",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "htop",
+    "short_text": "Monitor visual e interactivo de procesos con interfaz de barras de color.",
+    "long_text": "Permite explorar procesos, ver árbol de tareas y enviar señales interactivamente.",
+    "category": "utility",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "btop",
+    "short_text": "Monitor moderno de recursos del sistema en terminal con gráficos completos.",
+    "long_text": "Visualizador detallado de CPU, memoria, discos, redes y procesos con soporte de ratón.",
+    "category": "utility",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "ps",
+    "short_text": "Generador de instantáneas del estado actual de procesos del sistema.",
+    "long_text": "Lee la estructura de /proc para reportar identificadores PID, consumo y estado.",
+    "category": "utility",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "dmesg",
+    "short_text": "Visualizador y controlador del búfer de mensajes de arranque del kernel.",
+    "long_text": "Inspecciona registros de inicialización de hardware y controladores del kernel Linux.",
+    "category": "utility",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  },
+  {
+    "key": "journalctl",
+    "short_text": "Herramienta de consulta y filtrado de eventos de systemd-journald.",
+    "long_text": "Permite buscar logs por unidad de servicio, nivel de gravedad y rango temporal.",
+    "category": "utility",
+    "source": "curated",
+    "confidence": "high",
+    "version": 1
+  }
+]

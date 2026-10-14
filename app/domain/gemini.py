@@ -38,22 +38,22 @@ class GeminiContext(DomainModel):
 
 
 class AnalysisResult(DomainModel):
-    """Resultado estructurado del anlisis devuelto por Gemini."""
-    
+    """Resultado estructurado del análisis devuelto por Gemini."""
+
     summary: str
-    """Resumen extremadamente breve de qu pas."""
-    
+    """Resumen extremadamente breve de qué pasó."""
+
     explanation: str
-    """Explicacin de la causa (admitiendo si no se tienen datos suficientes)."""
-    
+    """Explicación de la causa (admitiendo si no se tienen datos suficientes)."""
+
     impact: str
     """Impacto real estimado para el sistema o usuario."""
-    
+
     confidence: str
-    """Nivel de certeza en el anlisis (alta, media, baja)."""
-    
+    """Nivel de certeza en el análisis (alta, media, baja)."""
+
     risk: str
     """Riesgo derivado si se ignora el evento."""
-    
+
     speech_text: str
-    """Texto conciso diseado para ser ledo en voz alta al usuario."""
+    """Texto conciso diseñado para ser leído en voz alta al usuario."""

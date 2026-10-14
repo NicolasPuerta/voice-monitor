@@ -35,9 +35,9 @@ class AnalysisAgent:
         clean_text = text.strip()
         if clean_text.startswith("```"):
             lines = clean_text.split("\n")
-            if lines[0].startswith("```"):
+            if lines and lines[0].strip().startswith("```"):
                 lines = lines[1:]
-            if lines and lines[-1].startswith("```"):
+            if lines and lines[-1].strip().startswith("```"):
                 lines = lines[:-1]
             clean_text = "\n".join(lines).strip()
 

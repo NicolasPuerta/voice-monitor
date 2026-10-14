@@ -1,6 +1,7 @@
 """Modelos de eventos detectados en el sistema."""
 
 from datetime import datetime, timezone
+from typing import Any
 from uuid import UUID, uuid4
 
 from pydantic import AwareDatetime, Field
@@ -73,11 +74,18 @@ class Event(DomainModel):
     event_type: EventType
     severity: EventSeverity
     confidence: ConfidenceLevel = ConfidenceLevel.MEDIUM
-    
+
     # Propiedades calculadas en la tubería
     decision: EventDecision | None = None
     score_result: ScoreResult | None = None
-    
+
     detected_at: AwareDatetime = Field(default_factory=_utc_now)
     summary: str = Field(min_length=1)
     metadata: EventMetadata = Field(default_factory=EventMetadata)
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        """Permite mutar únicamente campos calculados por el pipeline."""
+        if name in ("decision", "score_result"):
+            object.__setattr__(self, name, value)
+        else:
+            super().__setattr__(name, value)

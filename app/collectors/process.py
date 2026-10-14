@@ -108,7 +108,12 @@ def _read(getter: Callable[[], ReadT]) -> ReadT | None:
     """
     try:
         return getter()
-    except (psutil.AccessDenied, psutil.ZombieProcess, PermissionError, FileNotFoundError):
+    except (
+        psutil.AccessDenied,
+        psutil.ZombieProcess,
+        PermissionError,
+        FileNotFoundError,
+    ):
         return None
 
 
@@ -198,7 +203,8 @@ class ProcessCollector(Collector[tuple[ProcessSnapshot, ...]]):
         )
         self._last_stats = stats
         logger.debug(
-            "Procesos recolectados: %d de %d (desaparecidos=%d, con error=%d) en %.1f ms.",
+            "Procesos recolectados: %d de %d "
+            "(desaparecidos=%d, con error=%d) en %.1f ms.",
             stats.collected,
             stats.seen,
             stats.vanished,

@@ -13,6 +13,7 @@ dependencies = [
     "pydantic-settings>=2.3",
     "psutil>=5.9",
     "google-generativeai>=0.5.0",
+    "jinja2>=3.1",
 ]
 
 [project.optional-dependencies]
@@ -24,9 +25,21 @@ dev = [
     "mypy>=1.10",
     "types-psutil",
 ]
+piper = [
+    "piper-tts>=1.2.0",
+]
+reports = [
+    "weasyprint>=60.0",
+]
+
+[project.scripts]
+narrator = "app.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["app*"]
+
+[tool.setuptools.package-data]
+"app.storage" = ["*.json"]
 
 [tool.pytest.ini_options]
 minversion = "8.0"
@@ -56,4 +69,5 @@ ignored-classes = ["FieldInfo"]
 [tool.pylint."messages control"]
 disable = [
     "too-few-public-methods",
+    "import-error",
 ]

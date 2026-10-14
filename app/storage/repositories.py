@@ -1,8 +1,9 @@
 """Repositorios para persistir el modelo de dominio asncronamente."""
 
 import json
-import uuid
 from datetime import datetime
+from typing import Any
+import uuid
 
 from app.domain.events import Event
 from app.domain.knowledge import ProcessKnowledge
@@ -23,6 +24,27 @@ class SessionRepository:
         self.db.execute_async(
             "UPDATE sessions SET ended_at = ? WHERE id = ?",
             (ended_at.isoformat(), session_id),
+        )
+
+    def get_session(self, session_id: str) -> dict[str, Any] | None:
+        rows = self.db.fetch_sync(
+            "SELECT id, started_at, ended_at FROM sessions WHERE id = ?",
+            (session_id,),
+        )
+        return rows[0] if rows else None
+
+    def get_latest_session(self) -> dict[str, Any] | None:
+        rows = self.db.fetch_sync(
+            "SELECT id, started_at, ended_at FROM sessions "
+            "ORDER BY started_at DESC LIMIT 1"
+        )
+        return rows[0] if rows else None
+
+    def list_sessions(self, limit: int = 10) -> list[dict[str, Any]]:
+        return self.db.fetch_sync(
+            "SELECT id, started_at, ended_at FROM sessions "
+            "ORDER BY started_at DESC LIMIT ?",
+            (limit,),
         )
 
 
@@ -48,7 +70,7 @@ class EventRepository:
         self.db.execute_async(
             """
             INSERT INTO events (
-                id, session_id, event_type, severity, confidence, decision, 
+                id, session_id, event_type, severity, confidence, decision,
                 score, impact, novelty, anomaly, risk, relevance, repetition_penalty,
                 detected_at, app_key, summary, metadata_json
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -74,6 +96,19 @@ class EventRepository:
             ),
         )
 
+    def get_events_for_session(self, session_id: str) -> list[dict[str, Any]]:
+        return self.db.fetch_sync(
+            "SELECT * FROM events WHERE session_id = ? ORDER BY detected_at ASC",
+            (session_id,),
+        )
+
+    def count_events_for_session(self, session_id: str) -> int:
+        rows = self.db.fetch_sync(
+            "SELECT count(*) as count FROM events WHERE session_id = ?",
+            (session_id,),
+        )
+        return int(rows[0]["count"]) if rows else 0
+
 
 class KnowledgeRepository:
     def __init__(self, db: BackgroundDatabase) -> None:
@@ -92,7 +127,10 @@ class KnowledgeRepository:
             return ProcessKnowledge(
                 key=app_key,
                 short_text="Proceso de Python.",
-                long_text="Script ejecutado mediante el intrprete Python. Su comportamiento depende del cdigo ejecutado.",
+                long_text=(
+                    "Script ejecutado mediante el intérprete Python. "
+                    "Su comportamiento depende del código ejecutado."
+                ),
                 category="development",
                 source="heuristic",
                 confidence="low",
@@ -101,7 +139,10 @@ class KnowledgeRepository:
             return ProcessKnowledge(
                 key=app_key,
                 short_text=f"Proceso de {name}.",
-                long_text="Entorno de ejecucin detectado. Consumo variable segn la carga de trabajo.",
+                long_text=(
+                    "Entorno de ejecución detectado. "
+                    "Consumo variable según la carga de trabajo."
+                ),
                 category="development",
                 source="heuristic",
                 confidence="low",
@@ -117,7 +158,7 @@ class KnowledgeRepository:
             confidence="low",
         )
 
-    def _row_to_model(self, row: dict) -> ProcessKnowledge:
+    def _row_to_model(self, row: dict[str, Any]) -> ProcessKnowledge:
         return ProcessKnowledge(
             key=row["key"],
             short_text=row["short_text"],
@@ -142,4 +183,11 @@ class SourceHealthRepository:
             VALUES (?, ?, ?, ?, ?, ?)
             """,
             (str(uuid.uuid4()), session_id, source, state, reason, now.isoformat()),
+        )
+
+    def get_health_for_session(self, session_id: str) -> list[dict[str, Any]]:
+        return self.db.fetch_sync(
+            "SELECT * FROM source_health WHERE session_id = ? "
+            "ORDER BY updated_at ASC",
+            (session_id,),
         )

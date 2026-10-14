@@ -3,6 +3,7 @@
 import time
 import logging
 from enum import Enum
+from typing import Any
 import google.generativeai as genai
 from google.api_core.exceptions import ResourceExhausted, DeadlineExceeded, RetryError
 
@@ -109,12 +110,13 @@ class GeminiClient:
         self.enabled = settings.gemini.enabled
         self.model_name = settings.gemini.model
 
+        self.model: Any | None = None
         # Nunca se loguea la API key.
         if self.enabled and settings.gemini.api_key:
-            genai.configure(api_key=settings.gemini.api_key.get_secret_value())
-            self.model = genai.GenerativeModel(self.model_name)
-        else:
-            self.model = None
+            api_key = settings.gemini.api_key.get_secret_value()
+            genai.configure(api_key=api_key)  # type: ignore[attr-defined]
+            model_cls = genai.GenerativeModel  # type: ignore[attr-defined]
+            self.model = model_cls(self.model_name)
 
         self.circuit_breaker = circuit_breaker or CircuitBreaker()
         self.max_retries = 2
@@ -138,7 +140,9 @@ class GeminiClient:
             try:
                 response = self.model.generate_content(full_prompt)
                 self.circuit_breaker.record_success()
-                return response.text
+                if response and hasattr(response, "text") and response.text is not None:
+                    return str(response.text)
+                return None
             except ResourceExhausted:
                 # Rate limit (429)
                 logger.warning("Gemini Rate Limit Excedido.")

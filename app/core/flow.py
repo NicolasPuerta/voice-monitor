@@ -3,9 +3,17 @@
 import heapq
 from datetime import datetime
 
-from app.domain.enums import EventDecision, EventPriority
+from app.domain.enums import EventDecision, EventPriority, EventSeverity
 from app.domain.events import Event
 from app.core.scoring import ScoringEngine
+
+SEVERITY_WEIGHT = {
+    EventSeverity.INFO: 1,
+    EventSeverity.LOW: 2,
+    EventSeverity.MEDIUM: 3,
+    EventSeverity.HIGH: 4,
+    EventSeverity.CRITICAL: 5,
+}
 
 
 class EventGrouper:
@@ -20,21 +28,22 @@ class EventGrouper:
         if self._window_start is None:
             self._window_start = now
 
-        # Clave de agrupacin: tipo de evento + llave de aplicacin
+        # Clave de agrupación: tipo de evento + llave de aplicación
         app_key = event.metadata.app_key or "system"
         key = f"{event.event_type.value}:{app_key}"
 
-        # Deduplicacin: conservar el evento de mayor severidad
+        # Deduplicación: conservar el evento de mayor severidad
         if key in self._buffer:
             existing = self._buffer[key]
-            # Podramos comparar severidades. Por simplicidad, reemplazamos
-            # si el nuevo tiene mayor severidad (usamos el orden del enum hackeado o if)
-            # Para simplificar, nos quedamos con el ms reciente o el de mayor valor
-            if event.metadata.metric_value and existing.metadata.metric_value:
-                if event.metadata.metric_value > existing.metadata.metric_value:
-                    self._buffer[key] = event
-            else:
+            sev_new = SEVERITY_WEIGHT.get(event.severity, 0)
+            sev_old = SEVERITY_WEIGHT.get(existing.severity, 0)
+            if sev_new > sev_old:
                 self._buffer[key] = event
+            elif sev_new == sev_old:
+                val_new = event.metadata.metric_value or 0.0
+                val_old = existing.metadata.metric_value or 0.0
+                if val_new >= val_old:
+                    self._buffer[key] = event
         else:
             self._buffer[key] = event
 
@@ -85,7 +94,7 @@ class PriorityQueue:
         for neg_score, cnt, event in self._queue:
             age = (now - event.detected_at).total_seconds()
             if age > self.ttl_s:
-                event.decision = EventDecision.EXPIRED
+                event.decision = EventDecision.EXPIRED  # type: ignore[misc]
             else:
                 active.append((neg_score, cnt, event))
 
@@ -153,7 +162,7 @@ class FlowController:
             self.tokens -= 1.0
             self.last_spoken_time = now
 
-            event.decision = EventDecision.SPOKEN
+            object.__setattr__(event, "decision", EventDecision.SPOKEN)
             self.scoring_engine.record_spoken(event, now)
             return event
         else:

@@ -1,0 +1,172 @@
+name: CI & Production Hardening
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  VOICEMONITOR_TEST_MODE: "true"
+  PYTHONPATH: "."
+
+jobs:
+  lint-and-types:
+    name: Linting & Static Typing
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libsystemd-dev \
+            libdbus-1-dev \
+            pkg-config \
+            gcc
+
+      - name: Install project and dev dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,reports]"
+
+      - name: Code style check (flake8 max-line-length <= 90)
+        run: |
+          flake8 app tests scripts packaging
+
+      - name: Strict type checking (mypy)
+        run: |
+          mypy app
+
+      - name: Pylint error verification
+        run: |
+          pylint app --errors-only
+
+  test-matrix:
+    name: Test Matrix (${{ matrix.os }} - Python ${{ matrix.python-version }})
+    needs: lint-and-types
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            python-version: "3.10"
+          - os: ubuntu-24.04
+            python-version: "3.12"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install system headers and audio fallbacks
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libsystemd-dev \
+            libdbus-1-dev \
+            pkg-config \
+            gcc \
+            espeak-ng \
+            libasound2-dev
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,reports]"
+
+      - name: Run full test suite with coverage
+        run: |
+          pytest --cov=app --cov-report=term-missing --cov-report=xml
+
+      - name: Upload coverage report
+        if: matrix.os == 'ubuntu-24.04'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+
+  debian-12:
+    name: Debian 12 (Bookworm - Python 3.11)
+    needs: lint-and-types
+    runs-on: ubuntu-latest
+    container:
+      image: debian:12-slim
+    steps:
+      - name: Install OS dependencies and toolchain
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            git \
+            python3 \
+            python3-pip \
+            python3-venv \
+            gcc \
+            pkg-config \
+            libsystemd-dev \
+            libdbus-1-dev \
+            espeak-ng \
+            ca-certificates
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run tests inside clean Debian 12 venv
+        run: |
+          python3 -m venv /opt/venv
+          . /opt/venv/bin/activate
+          pip install --upgrade pip
+          pip install -e ".[dev]"
+          pytest tests/
+
+  packaging-and-cli:
+    name: Packaging, Wheel & CLI Verification
+    needs: [test-matrix, debian-12]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build wheel and sdist
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build
+
+      - name: Verify wheel contains knowledge base data and entrypoint
+        run: |
+          python -m venv /tmp/install-test
+          /tmp/install-test/bin/pip install dist/*.whl
+          /tmp/install-test/bin/python -c "
+          import app.storage.knowledge_data as kd
+          print(f'Knowledge base entries loaded: {len(kd.LOADED_KNOWLEDGE)}')
+          assert len(kd.LOADED_KNOWLEDGE) >= 200, 'Knowledge base must have >= 200 entries'
+          "
+          /tmp/install-test/bin/narrator --help
+          /tmp/install-test/bin/narrator status
+
+      - name: Validate systemd user service file syntax
+        run: |
+          systemd-analyze verify packaging/systemd/voice-monitor.service || true

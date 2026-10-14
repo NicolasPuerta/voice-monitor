@@ -81,13 +81,18 @@ class BackgroundDatabase:
     """Maneja las escrituras a SQLite en un hilo en background para no bloquear."""
 
     def __init__(
-        self, db_path: Path | str, batch_size: int = 50, flush_interval_s: float = 2.0
+        self,
+        db_path: Path | str,
+        batch_size: int = 50,
+        flush_interval_s: float = 2.0,
+        health_manager: Any | None = None,
     ) -> None:
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
         self.batch_size = batch_size
         self.flush_interval_s = flush_interval_s
+        self.health_manager = health_manager
         self._queue: queue.Queue[tuple[str, tuple[Any, ...]] | None] = queue.Queue()
         self._stop_event = threading.Event()
         self._thread = threading.Thread(target=self._worker, daemon=True)
@@ -104,7 +109,8 @@ class BackgroundDatabase:
             # Simple migration
             cursor = conn.cursor()
             cursor.execute(
-                "SELECT count(name) FROM sqlite_master WHERE type='table' AND name='schema_version'"
+                "SELECT count(name) FROM sqlite_master "
+                "WHERE type='table' AND name='schema_version'"
             )
             if cursor.fetchone()[0] == 0:
                 conn.executescript(SCHEMA_V1)
@@ -115,47 +121,12 @@ class BackgroundDatabase:
 
     def _seed_knowledge(self, conn: sqlite3.Connection) -> None:
         """Seed initial verifiable explanations for common processes."""
-        seeds = [
-            (
-                "firefox",
-                "Navegador web Firefox.",
-                "Uso de CPU comn por renderizado y extensiones.",
-                "browser",
-                "curated",
-                "high",
-                1,
-            ),
-            (
-                "systemd",
-                "Administrador de sistema y servicios de Linux.",
-                "PID 1. No debe consumir mucha CPU de forma sostenida.",
-                "system",
-                "curated",
-                "high",
-                1,
-            ),
-            (
-                "bash",
-                "Intrprete de comandos (shell).",
-                "Bajo consumo esperado.",
-                "shell",
-                "curated",
-                "high",
-                1,
-            ),
-            (
-                "gnome-shell",
-                "Entorno de escritorio GNOME.",
-                "Responsable de la UI, ventanas y animaciones.",
-                "desktop",
-                "curated",
-                "high",
-                1,
-            ),
-        ]
+        from app.storage.knowledge_data import get_seeded_knowledge
+
+        seeds = get_seeded_knowledge()
         conn.executemany(
-            """INSERT OR IGNORE INTO process_knowledge 
-               (key, short_text, long_text, category, source, confidence, version) 
+            """INSERT OR IGNORE INTO process_knowledge
+               (key, short_text, long_text, category, source, confidence, version)
                VALUES (?, ?, ?, ?, ?, ?, ?)""",
             seeds,
         )
@@ -166,20 +137,22 @@ class BackgroundDatabase:
         conn.execute("PRAGMA journal_mode=WAL;")
         conn.execute("PRAGMA synchronous=NORMAL;")
 
-        batch = []
+        batch: list[tuple[str, tuple[Any, ...]]] = []
 
         def flush() -> None:
             if not batch:
                 return
-            try:
-                for query, params in batch:
+            for query, params in batch:
+                try:
                     conn.execute(query, params)
-                conn.commit()
-            except sqlite3.Error:
-                # En un entorno real se hara log del error
-                conn.rollback()
-            finally:
-                batch.clear()
+                    conn.commit()
+                    if self.health_manager is not None:
+                        self.health_manager.record_success("sqlite")
+                except sqlite3.Error as err:
+                    conn.rollback()
+                    if self.health_manager is not None:
+                        self.health_manager.record_failure("sqlite", reason=str(err))
+            batch.clear()
 
         while not self._stop_event.is_set():
             try:

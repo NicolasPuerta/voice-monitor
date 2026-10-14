@@ -3,11 +3,14 @@
 from pydantic import AwareDatetime
 
 from app.domain.base import DomainModel, NonNegativeFloat, NonNegativeInt
+from app.domain.journald import JournaldSnapshot
+from app.domain.risk import RiskSignal
 from app.domain.snapshots import (
     ProcessSnapshot,
     ResourceSnapshot,
     SystemPressure,
 )
+from app.domain.systemd import SystemdSnapshot
 
 
 class ApplicationGroup(DomainModel):
@@ -27,6 +30,11 @@ class ApplicationGroup(DomainModel):
 
     memory_rss_bytes: NonNegativeInt = 0
     """Suma de la memoria residente de todos los procesos del grupo."""
+
+    @property
+    def display_name(self) -> str:
+        """Alias para el nombre visible del grupo de aplicación."""
+        return self.name
 
 
 class SystemContext(DomainModel):
@@ -49,3 +57,12 @@ class SystemContext(DomainModel):
 
     source_health: dict[str, str] = {}
     """Estado de las fuentes de datos, útil para evaluar confiabilidad."""
+
+    systemd: SystemdSnapshot | None = None
+    """Instantánea de unidades y servicios systemd, si está disponible."""
+
+    journald: JournaldSnapshot | None = None
+    """Instantánea incremental de eventos en journald, si está disponible."""
+
+    risk_signals: tuple[RiskSignal, ...] = ()
+    """Señales de riesgo detectadas y estructuradas por RiskEngine."""

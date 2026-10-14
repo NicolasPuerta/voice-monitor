@@ -18,6 +18,13 @@ class EventType(str, Enum):
     BATTERY_LOW = "battery_low"
     BATTERY_STATE_CHANGED = "battery_state_changed"
     SYSTEM_PRESSURE = "system_pressure"
+    OOM_KILL = "oom_kill"
+    SERVICE_FAILED = "service_failed"
+    PROCESS_UNINTERRUPTIBLE_SLEEP = "process_uninterruptible_sleep"
+    ZOMBIE_ACCUMULATION = "zombie_accumulation"
+    EXTREME_PRESSURE = "extreme_pressure"
+    SERVICE_FLAPPING = "service_flapping"
+    RISK_SIGNAL = "risk_signal"
 
 
 class EventSeverity(str, Enum):

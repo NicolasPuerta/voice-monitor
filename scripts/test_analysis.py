@@ -1,16 +1,16 @@
-"""Script de prueba para verificar el anlisis con Gemini sin usar los recolectores reales."""
+"""Script de prueba para anlisis con Gemini sin usar recolectores reales."""
 
-import sys
 import logging
 from pathlib import Path
+import sys
 
 # Agregar app al path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from app.core.config import Settings
-from app.core.gemini import GeminiClient
-from app.core.analysis import AnalysisAgent
-from app.domain.gemini import GeminiContext, SafeEventSummary
+from app.core.analysis import AnalysisAgent  # noqa: E402
+from app.core.config import Settings  # noqa: E402
+from app.core.gemini import GeminiClient  # noqa: E402
+from app.domain.gemini import GeminiContext, SafeEventSummary  # noqa: E402
 
 
 def main() -> None:
@@ -39,7 +39,10 @@ def main() -> None:
             summary="Alto uso de CPU detectado (99%)",
             duration_s=45.0,
         ),
-        process_knowledge="FFmpeg es una herramienta de conversin multimedia que tpicamente consume mucha CPU.",
+        process_knowledge=(
+            "FFmpeg es una herramienta de conversin multimedia que "
+            "tpicamente consume mucha CPU."
+        ),
     )
 
     print("Enviando contexto de prueba a Gemini...")

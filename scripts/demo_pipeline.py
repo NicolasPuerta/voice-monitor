@@ -10,6 +10,8 @@ from pathlib import Path
 # Asegurar path correcto
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from app.collectors.health import SourceHealthManager  # noqa: E402
+from app.core.dnd import DNDManager  # noqa: E402
 from app.core.analysis import AnalysisAgent  # noqa: E402
 from app.core.audio.adapters.espeak import EspeakGenerator  # noqa: E402
 from app.core.audio.adapters.gemini import GeminiAudioGenerator  # noqa: E402
@@ -29,7 +31,11 @@ from app.storage.db import BackgroundDatabase  # noqa: E402
 from app.storage.repositories import EventRepository, KnowledgeRepository  # noqa: E402
 
 
-def run_demo(iterations: int | None = None) -> None:
+def run_demo(
+    iterations: int | None = None,
+    no_audio: bool = False,
+    test_gemini: bool = False,
+) -> None:
     """Ejecuta el monitor completo de demostración."""
     settings = Settings.load()
     configure_logging("INFO")
@@ -37,8 +43,19 @@ def run_demo(iterations: int | None = None) -> None:
     logger = logging.getLogger("DEMO")
     logger.info("Iniciando Demo End-to-End Voice Monitor...")
 
+    # 0. Salud de fuentes y No Molestar (DND)
+    health_manager = SourceHealthManager()
+    dnd_manager = DNDManager(
+        health_manager=health_manager,
+        manual_dnd=settings.dnd.enabled or no_audio,
+        text_only=no_audio,
+    )
+
     # 1. Base de datos
-    db = BackgroundDatabase(Path.home() / ".local/share/ubuntu-voice-monitor/demo.db")
+    db = BackgroundDatabase(
+        Path.home() / ".local/share/ubuntu-voice-monitor/demo.db",
+        health_manager=health_manager,
+    )
     event_repo = EventRepository(db)
     knowledge_repo = KnowledgeRepository(db)
 
@@ -49,23 +66,22 @@ def run_demo(iterations: int | None = None) -> None:
     gemini_builder = GeminiContextBuilder(sanitizer)
 
     # 3. Audio: Piper es el PRIMORDIAL; espeak respaldo; Gemini ÚLTIMO RECURSO
-    player = SystemAudioPlayer()
-
-    piper_kwargs = {}
-    if settings.narration.piper_model_path:
-        piper_kwargs["model_path"] = settings.narration.piper_model_path
-    piper = PiperGenerator(**piper_kwargs)
-
-    espeak = EspeakGenerator(voice="es-la")
-    gemini_audio = GeminiAudioGenerator(settings)
-
-    # Cascada estricta: Piper (1º) -> espeak-ng (2º) -> Gemini Audio (Último recurso)
-    fallbacks = [espeak, gemini_audio]
-    audio_manager = AudioQueueManager(
-        player,
-        primary_generator=piper,
-        fallback_generators=fallbacks,
-    )
+    audio_manager = None
+    if not no_audio:
+        player = SystemAudioPlayer()
+        piper_kwargs = {}
+        if settings.narration.piper_model_path:
+            piper_kwargs["model_path"] = settings.narration.piper_model_path
+        piper = PiperGenerator(**piper_kwargs)
+        espeak = EspeakGenerator(voice="es-la")
+        gemini_audio = GeminiAudioGenerator(settings)
+        fallbacks = [espeak, gemini_audio]
+        audio_manager = AudioQueueManager(
+            player,
+            primary_generator=piper,
+            fallback_generators=fallbacks,
+            health_manager=health_manager,
+        )
 
     # 4. Core Pipeline
     context_builder = SystemContextBuilder()
@@ -86,13 +102,18 @@ def run_demo(iterations: int | None = None) -> None:
         audio_manager=audio_manager,
         event_repo=event_repo,
         knowledge_repo=knowledge_repo,
-        test_mode_gemini=False,
+        test_mode_gemini=test_gemini,
+        dnd_manager=dnd_manager,
+        health_manager=health_manager,
     )
 
     logger.info("Pipeline construido con éxito.")
-    logger.info(
-        "Prioridad de voz: 1º Piper TTS | 2º espeak-ng | 3º Gemini Audio (último recurso)"
-    )
+    if no_audio:
+        logger.info("Modo texto / sin audio activado.")
+    else:
+        logger.info(
+            "Prioridad voz: 1º Piper TTS | 2º espeak-ng | 3º Gemini Audio"
+        )
     logger.info("Ejecutando monitoreo continuo (Pulsa Ctrl+C para salir)...")
 
     try:
@@ -107,7 +128,8 @@ def run_demo(iterations: int | None = None) -> None:
     finally:
         logger.info("Apagando servicios...")
         pipeline.stop()
-        audio_manager.shutdown()
+        if audio_manager:
+            audio_manager.shutdown()
         db.stop()
         logger.info("Demo finalizada.")
 
@@ -120,5 +142,19 @@ if __name__ == "__main__":
         default=None,
         help="Iteraciones a ejecutar (por defecto: continuo hasta Ctrl+C).",
     )
+    parser.add_argument(
+        "--no-audio",
+        action="store_true",
+        help="Ejecuta sin salida de audio (modo texto/silencioso).",
+    )
+    parser.add_argument(
+        "--test-gemini",
+        action="store_true",
+        help="Simula respuestas de Gemini sin llamadas a la API externa.",
+    )
     cli_args = parser.parse_args()
-    run_demo(iterations=cli_args.iterations)
+    run_demo(
+        iterations=cli_args.iterations,
+        no_audio=cli_args.no_audio,
+        test_gemini=cli_args.test_gemini,
+    )
