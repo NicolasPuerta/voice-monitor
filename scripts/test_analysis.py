@@ -17,9 +17,9 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO)
 
     settings = Settings.load()
-    if not settings.app.gemini_enabled or not settings.app.gemini_api_key:
-        print("Error: Gemini no est habilitado o no hay API key configurada en .env.")
-        print("Asegrese de configurar GEMINI_ENABLED=true y GEMINI_API_KEY.")
+    if not settings.gemini.enabled or not settings.gemini.api_key:
+        print("Error: Gemini no está habilitado o no hay API key configurada en .env.")
+        print("Asegúrese de configurar GEMINI_ENABLED=true y GEMINI_API_KEY.")
         sys.exit(1)
 
     client = GeminiClient(settings)

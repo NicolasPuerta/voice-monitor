@@ -1,132 +1,161 @@
 # Ubuntu Voice Monitor
 
-Aplicación Python para Ubuntu que observa el comportamiento del sistema
-operativo, envía información relevante a Gemini para su análisis y
-reproduce por audio el análisis generado.
+Aplicación Python para Ubuntu que observa el comportamiento del sistema operativo, analiza eventos relevantes mediante Gemini y narra los hallazgos al usuario a través de audio.
 
 ```
-Ubuntu → Python Monitor → System Context → Gemini → Analysis → Audio → Ubuntu Speakers
+Ubuntu (procfs/sysfs/psutil) → System Context → Event Detector → Scoring & Flow Control → Gemini Analysis → Audio Player → Parlantes
 ```
 
 ## Principios
 
-- Sin entrada de voz ni micrófono; no hay conversación con el usuario.
-- Python obtiene la información del sistema.
-- Gemini solo analiza la información recibida: no ejecuta comandos ni
-  modifica el sistema.
+- **Estrictamente de solo lectura:** No ejecuta comandos ni altera el estado del sistema operativo.
+- **Sin entrada de voz ni micrófono:** No hay escucha ni conversación interactiva; el agente únicamente narra reportes.
+- **Privacidad primero:** Rutas de usuario (`$HOME`), tokens, credenciales y variables de entorno se enmascaran localmente antes de enviar datos a la nube.
+- **No bloqueante:** La recolección de métricas nunca espera por respuestas de red (Gemini) ni por la reproducción de audio.
 
-## Estado
+---
 
-Hasta el momento se ha implementado lo siguiente:
+## Estado del Proyecto
 
-- **Estructura del Proyecto y Configuración:** Pytest, flake8, mypy, pylint (MR 01).
-- **Configuración y Modelos de Dominio:** Configuración centralizada con Pydantic Settings y modelos de dominio inmutables (MR 02).
-- **Process Collector:** Observación de procesos de Linux (pid, stado, CPU, memoria, cmdline sanitizado) utilizando psutil de forma segura (MR 03).
-- **System Metrics Collectors:** Métricas del sistema, PSI desde /proc/pressure/ y estado energético desde /sys/class/power_supply/ (MR 04).
-- **Application Grouping and Context:** SystemContextBuilder para combinar métricas con agrupación lógica heurística basada en cgroups y árbol de procesos (MR 05).
-- **Event Prioritization and Flow Control:** ScoringEngine determinista, ventanas de coalescencia (EventGrouper), PriorityQueue (TTL) y prevencion de saturación sonora con FlowController (MR 07).
-- **Persistence and Process Knowledge Base:** Persistencia SQLite (WAL) y base de conocimiento versionada sobre procesos de Linux comunes (MR 08).
+Se han completado los módulos correspondientes a los **MR 01 al MR 12**:
 
-Aún no están implementados la detección de anomalías complejas, la integración final con Gemini ni el TTS.
+- **MR 01 - Estructura y Herramientas:** Base con `pytest`, `flake8`, `mypy`, `pylint`.
+- **MR 02 - Configuración y Dominio:** Configuración centralizada (`Pydantic Settings`), inmutabilidad y validación de tipos.
+- **MR 03 - Process Collector:** Observación de procesos de Linux (`pid`, `estado`, `CPU`, `memoria`, `cmdline` sanitizado) con `psutil`.
+- **MR 04 - System Metrics Collectors:** Métricas de CPU, Memoria (`MemAvailable`), Swap, PSI (`/proc/pressure/`) y estado energético (`/sys/class/power_supply/`) con `SourceHealthManager`.
+- **MR 05 - Application Grouping & System Context:** `SystemContextBuilder` para agrupar árboles de subprocesos por aplicación y `cgroups` sin inventar identidades.
+- **MR 07 - Event Prioritization & Flow Control:** `ScoringEngine` explicable y determinista, coalescencia de 3 s (`EventGrouper`), cola con TTL de 30 s (`PriorityQueue`) y control de saturación por token bucket (`FlowController`) con soporte de preemption para eventos críticos.
+- **MR 08 - Persistencia y Knowledge Base:** Base de datos SQLite asíncrona (`WAL`), repositorio de eventos y base de conocimiento de procesos con resolución curada y heurística.
+- **MR 09 - Gemini Integration Foundation:** `PrivacySanitizer` (redacción de secretos, JWT, AWS keys, URLs con auth), `GeminiContextBuilder`, y `GeminiClient` con reintentos y `CircuitBreaker`.
+- **MR 10 - Gemini Analysis Agent:** `AnalysisAgent` con modelo estructurado Pydantic (`AnalysisResult`), prompts versionados en español para lenguaje no técnico.
+- **MR 11 - Audio Output:** `AudioQueueManager` asíncrono con cancelación/interrupción, caché SHA-256 y cascada de fallbacks (`Gemini Audio` → `Piper TTS` → `espeak-ng`).
+- **MR 12 - End-to-End Narration Pipeline:** Integración completa en `NarrationPipeline`, detector basado en reglas y demostración funcional CLI.
 
-## Estructura
+---
 
-```
-app/          Código fuente (punto de entrada: app/main.py)
-app/core/     Configuración (config.py) y logging (logging.py)
-app/domain/   Modelos y enums del dominio (independientes de psutil)
-tests/        Pruebas con pytest
-scripts/      Utilidades de desarrollo
-```
+## Requisitos Previos
 
-## Configuración
+- **Sistema Operativo:** Ubuntu 22.04 / 24.04 nativo o WSL2 (con **WSLg** para audio).
+- **Python:** 3.10 o superior.
+- **Herramientas de audio (opcional según el motor):**
+  - Para fallback ligero: `sudo apt install espeak-ng alsa-utils`
+  - Para Piper (neural TTS offline): binario `piper` y modelo `.onnx`.
+  - Para reproducción general: `aplay` (incluido en `alsa-utils`), `paplay` o `ffplay` (`ffmpeg`).
 
-Se lee de variables de entorno o de un archivo `.env` (ver `.env.example`);
-el entorno tiene prioridad. Las variables ausentes o vacías usan su valor por
-defecto y los valores inválidos detienen el arranque con un error claro.
+---
 
-| Variable                       | Defecto            | Descripción                                   |
-|--------------------------------|--------------------|-----------------------------------------------|
-| `APP_ENV`                      | `development`      | `development`, `test` o `production`          |
-| `LOG_LEVEL`                    | `INFO`             | DEBUG, INFO, WARNING, ERROR, CRITICAL         |
-| `COLLECTOR_INTERVAL_S`         | `5`                | Segundos entre lecturas (0.5 – 3600)          |
-| `COLLECTOR_BATTERY_INTERVAL_S` | `15`               | Igual, en batería (debe ser ≥ el anterior)    |
-| `COLLECTOR_ADAPTIVE`           | `true`             | Adapta el intervalo a la actividad            |
-| `GEMINI_ENABLED`               | `false`            | Si es `true`, `GEMINI_API_KEY` es obligatoria |
-| `GEMINI_MODEL`                 | `gemini-2.5-flash` | Modelo de Gemini                              |
-| `GEMINI_API_KEY`               | *(vacía)*          | Nunca en el código ni en logs                 |
-| `NARRATION_VERBOSITY`          | `normal`           | `minimal`, `normal` o `verbose`               |
-| `NARRATION_MIN_GAP_S`          | `10`               | Segundos mínimos entre narraciones            |
-| `NARRATION_MAX_BURST`          | `3`                | Narraciones seguidas antes de pausar          |
-| `NARRATION_EVENT_TTL_S`        | `60`               | Vigencia de un evento (≥ `MIN_GAP_S`)         |
-| `PRIVACY_REDACT_HOME`          | `true`             | Oculta el directorio personal                 |
-| `STORAGE_DB_PATH`              | `~/.local/share/ubuntu-voice-monitor/events.db` | Ruta de la base local |
-| `DND_ENABLED`                  | `false`            | No Molestar: no se narra ningún evento        |
+## Guía de Instalación y Ejecución desde Cero
 
-```python
-from pathlib import Path
-
-from app.core import Settings, configure_logging
-
-settings = Settings.load(Path(".env"))
-configure_logging(settings.app.log_level)
-```
-
-Los logs incluyen timestamp y nivel:
-`2026-10-06 20:56:44 | INFO     | app.main | mensaje`.
-
-
-## Requisitos
-
-- Python 3.10 o superior
-
-## Instalación
+### 1. Clonar o ingresar al repositorio
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
+cd voice-monitor
+```
+
+### 2. Crear y activar el entorno virtual
+
+En Ubuntu / Linux / WSL:
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+*(En Windows PowerShell: `python -m venv .venv` y `.venv\Scripts\Activate.ps1`)*
+
+### 3. Instalar dependencias
+
+```bash
+pip install --upgrade pip
 pip install -e ".[dev]"
-cp .env.example .env               # Windows: copy .env.example .env
 ```
 
-## Uso
+### 4. Configurar las variables de entorno
+
+Copia la plantilla `.env.example`:
+```bash
+cp .env.example .env
+```
+
+Edita `.env` con tus preferencias. Para habilitar Gemini con análisis en la nube:
+```ini
+GEMINI_ENABLED=true
+GEMINI_API_KEY=tu_api_key_de_google_ai_studio
+GEMINI_MODEL=gemini-2.5-flash
+```
+
+Si deseas usar **Piper TTS** para voz neuronal offline, especifica la ruta de tu modelo:
+```ini
+NARRATION_PIPER_MODEL_PATH=/ruta/al/modelo/es_ES-enrique-medium.onnx
+```
+
+---
+
+## Cómo Ejecutar
+
+### Opción A: Demostración del Pipeline Completo (End-to-End)
+
+Ejecuta el pipeline completo con recolección, detección de eventos, puntuación, análisis con Gemini y salida por voz:
 
 ```bash
-python -m app
+python scripts/demo_pipeline.py
 ```
 
-## Calidad de código
+- Se ejecutará en un bucle continuo de monitoreo.
+- Para detenerlo, presiona `Ctrl + C`.
+- Si deseas ejecutarlo durante un número exacto de iteraciones/segundos (por ejemplo, 10 segundos):
+  ```bash
+  python scripts/demo_pipeline.py --iterations 10
+  ```
 
+### Opción B: Prueba Aislada de Análisis de Gemini
+
+Para verificar únicamente la conexión con Gemini y la estructura del reporte sin activar recolectores:
+
+```bash
+python scripts/test_analysis.py
+```
+
+### Opción C: Ejecución de Pruebas Automatizadas y Calidad
+
+Para correr la suite de tests unitarios y de integración:
 ```bash
 pytest
-flake8 app tests
-mypy
-pylint app tests
 ```
 
-O todo junto: `bash scripts/check.sh`.
+Para verificar estilo y tipos:
+```bash
+flake8 app tests scripts
+mypy app tests scripts
+```
 
-## Convenciones
+---
 
-- Código fuente (variables, clases, funciones) en inglés.
-- Docstrings en español (estilo Google).
-- Comentarios técnicos preferiblemente en inglés.
-- Mensajes al usuario pueden estar en español.
-- Type hints obligatorios; longitud máxima de línea: 90.
+## Tabla de Configuración (`.env`)
 
-## Audio y Reproducción (WSL vs Ubuntu Nativo)
-El sistema reproduce el análisis de Gemini mediante altavoces, operando en un hilo independiente para evitar bloqueos (AudioQueueManager).
-Implementa fallback automático (Gemini Audio -> Piper -> espeak-ng) y caché en memoria para no regenerar el mismo reporte repetidas veces.
+| Variable                       | Defecto                                        | Descripción                                    |
+|--------------------------------|------------------------------------------------|------------------------------------------------|
+| `APP_ENV`                      | `development`                                  | `development`, `test` o `production`           |
+| `LOG_LEVEL`                    | `INFO`                                         | DEBUG, INFO, WARNING, ERROR, CRITICAL          |
+| `COLLECTOR_INTERVAL_S`         | `5.0`                                          | Segundos entre lecturas de métricas            |
+| `COLLECTOR_BATTERY_INTERVAL_S` | `15.0`                                         | Segundos entre lecturas funcionando en batería |
+| `COLLECTOR_ADAPTIVE`           | `true`                                         | Adapta el intervalo según carga del sistema    |
+| `GEMINI_ENABLED`               | `false`                                        | Si es `true`, requiere `GEMINI_API_KEY`        |
+| `GEMINI_MODEL`                 | `gemini-2.5-flash`                             | Modelo de Gemini para el análisis              |
+| `GEMINI_API_KEY`               | *(vacía)*                                      | Clave privada (nunca se muestra en logs)       |
+| `NARRATION_VERBOSITY`          | `normal`                                       | `minimal`, `normal` o `verbose`                |
+| `NARRATION_MIN_GAP_S`          | `10.0`                                         | Tiempo mínimo entre dos narraciones            |
+| `NARRATION_MAX_BURST`          | `3`                                            | Ráfaga máxima de narraciones permitida         |
+| `NARRATION_EVENT_TTL_S`        | `60.0`                                         | Segundos de vigencia antes de expirar evento   |
+| `NARRATION_PIPER_MODEL_PATH`   | *(vacía)*                                      | Ruta al modelo `.onnx` de Piper TTS (opcional) |
+| `PRIVACY_REDACT_HOME`          | `true`                                         | Reemplaza `$HOME` por `~` en textos            |
+| `STORAGE_DB_PATH`              | `~/.local/share/ubuntu-voice-monitor/events.db`| Ruta del archivo SQLite                        |
+| `DND_ENABLED`                  | `false`                                        | Modo No Molestar (silencia toda narración)     |
 
-### Diferencias de Entorno
-- **Ubuntu Nativo:** Utiliza la configuración de audio predeterminada (ALSA, PulseAudio, PipeWire). Herramientas como play o paplay funcionan _out-of-the-box_ sin lag notable.
-- **WSL (Windows Subsystem for Linux):** Requiere **WSLg** para soportar el puente de PulseAudio automáticamente hacia el host de Windows. Si el audio no se escucha en WSL:
-  1. Verifica que WSLg esté habilitado.
-  2. Opcionalmente redirige el output de audio hacia el ejecutable nativo de Windows (e.g. usando powershell o un servidor PulseAudio en Windows).
+---
 
-## Ejecución de Demo End-to-End
-Puedes probar la arquitectura completa sin integrarla todavía en el main.py usando el script de demostración incluido:
-`ash
-python scripts/demo_pipeline.py
-`
-Este comando encenderá el NarrationPipeline, usará Gemini y generará voz sintética usando las prioridades configuradas. Para detenerlo, usa Ctrl+C.
+## Consideraciones de Audio (WSL vs Ubuntu Nativo)
+
+- **Ubuntu Nativo:** Utiliza PulseAudio, PipeWire o ALSA directamente. `aplay` (de `alsa-utils`) funciona de forma nativa sin configuración adicional.
+- **WSL (Windows Subsystem for Linux):** Requiere **WSLg** (presente por defecto en Windows 11 o Windows 10 actualizado) para canalizar el audio de PulseAudio hacia los altavoces de Windows. Si no escuchas sonido en WSL:
+  1. Verifica que el servidor de audio responda: `aplay /usr/share/sounds/alsa/Front_Center.wav`.
+  2. Asegúrate de tener instalado `alsa-utils` y `espeak-ng`.

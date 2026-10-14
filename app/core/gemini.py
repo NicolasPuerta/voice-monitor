@@ -79,7 +79,7 @@ class GeminiContextBuilder:
             battery_percent=resources.battery_percent,
             battery_plugged=resources.battery_plugged,
             primary_event=primary,
-            recent_events=[],  # Por ahora vaco; MR7 coalesce lograra integrarlos si se pidiera, o se rellenara con db.
+            recent_events=[],  # Eventos recientes si aplica
             process_knowledge=self.sanitizer.sanitize_text(process_knowledge),
         )
 
@@ -106,12 +106,12 @@ class GeminiClient:
 
     def __init__(self, settings: Settings, circuit_breaker: CircuitBreaker | None = None):
         self.settings = settings
-        self.enabled = settings.app.gemini_enabled
-        self.model_name = settings.app.gemini_model
+        self.enabled = settings.gemini.enabled
+        self.model_name = settings.gemini.model
 
         # Nunca se loguea la API key.
-        if self.enabled and settings.app.gemini_api_key:
-            genai.configure(api_key=settings.app.gemini_api_key.get_secret_value())
+        if self.enabled and settings.gemini.api_key:
+            genai.configure(api_key=settings.gemini.api_key.get_secret_value())
             self.model = genai.GenerativeModel(self.model_name)
         else:
             self.model = None

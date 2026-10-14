@@ -29,7 +29,7 @@ from app.core.audio.adapters.espeak import EspeakGenerator
 from app.core.audio.adapters.gemini import GeminiAudioGenerator
 
 
-def run_demo() -> None:
+def run_demo(iterations: int | None = None) -> None:
     settings = Settings.load()
     configure_logging("INFO")
 
@@ -49,20 +49,23 @@ def run_demo() -> None:
 
     # 3. Audio
     player = SystemAudioPlayer()
-    
+
     fallbacks = []
-    
+
     # Piper si fue configurado en .env
     from app.core.audio.adapters.piper import PiperGenerator
+
     if settings.narration.piper_model_path:
         piper = PiperGenerator(model_path=settings.narration.piper_model_path)
         fallbacks.append(piper)
-        
+
     espeak = EspeakGenerator(voice="es-la")
     fallbacks.append(espeak)
-    
+
     gemini_audio = GeminiAudioGenerator(settings)
-    audio_manager = AudioQueueManager(player, primary_generator=gemini_audio, fallback_generators=fallbacks)
+    audio_manager = AudioQueueManager(
+        player, primary_generator=gemini_audio, fallback_generators=fallbacks
+    )
 
     # 4. Core
     context_builder = SystemContextBuilder()
@@ -91,13 +94,14 @@ def run_demo() -> None:
     logger.info("Pipeline construido. Ejecutando monitoreo (Pulsa Ctrl+C para salir)...")
 
     try:
-        # Simulamos 5 segundos de ejecucin continua
-        for i in range(10):
+        count = 0
+        while iterations is None or count < iterations:
             now = datetime.now(timezone.utc)
             pipeline.step(now)
             time.sleep(1.0)
+            count += 1
     except KeyboardInterrupt:
-        logger.info("Interrupcin recibida.")
+        logger.info("Interrupción recibida.")
     finally:
         logger.info("Apagando servicios...")
         pipeline.stop()
@@ -107,4 +111,14 @@ def run_demo() -> None:
 
 
 if __name__ == "__main__":
-    run_demo()
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Demo del Pipeline End-to-End.")
+    parser.add_argument(
+        "--iterations",
+        type=int,
+        default=None,
+        help="Iteraciones a ejecutar (por defecto: continuo hasta Ctrl+C).",
+    )
+    args = parser.parse_args()
+    run_demo(iterations=args.iterations)

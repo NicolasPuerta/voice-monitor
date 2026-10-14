@@ -18,13 +18,13 @@ class GeminiAudioGenerator(AudioGenerator):
 
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
-        self.enabled = settings.app.gemini_enabled
+        self.enabled = settings.gemini.enabled
         # Asumimos que se configura un modelo multimodal como gemini-1.5-pro-audio
         # Si el modelo no lo soporta, el API rechazar la solicitud.
-        self.model_name = settings.app.gemini_model
+        self.model_name = settings.gemini.model
 
-        if self.enabled and settings.app.gemini_api_key:
-            genai.configure(api_key=settings.app.gemini_api_key.get_secret_value())
+        if self.enabled and settings.gemini.api_key:
+            genai.configure(api_key=settings.gemini.api_key.get_secret_value())
             self.model = genai.GenerativeModel(self.model_name)
         else:
             self.model = None
@@ -39,14 +39,14 @@ class GeminiAudioGenerator(AudioGenerator):
 
         try:
             # Solicitamos a Gemini que devuelva el audio de este texto.
-            # Segn las capacidades de la API (ej. Gemini 2.0 o 1.5 con output audio)
-            # Pasamos un config explicitly solicitando audio si la lib lo soporta.
-            # Nota: Si el SDK local (python) an no expone response_modalities de forma limpia,
-            # esto podra fallar. Este es el patrn terico esperado.
-            prompt = f"Di exactamente lo siguiente de la forma ms natural posible: {text}"
+            # Según las capacidades de la API (ej. Gemini con output audio).
+            # Pasamos un config solicitando audio si la lib lo soporta.
+            # Nota: Si el SDK local aún no expone response_modalities limpiamente,
+            # esto podría fallar.
+            prompt = f"Di exactamente lo siguiente de forma natural: {text}"
 
             # Algunos SDKs usan generation_config={"response_mime_type": "audio/mp3"}
-            # Si lanza error, caer en el except.
+            # Si lanza error, caerá en el except.
             response = self.model.generate_content(prompt)
 
             # Buscar el part de audio en la respuesta
@@ -68,7 +68,7 @@ class GeminiAudioGenerator(AudioGenerator):
                 return AudioData(data=audio_bytes, format=fmt, hash_key=hash_key)
             else:
                 logger.debug(
-                    "El modelo de Gemini no retorn partes de audio en la respuesta. (No admitido?)"
+                    "El modelo de Gemini no retornó partes de audio en la respuesta."
                 )
                 return None
 
