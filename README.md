@@ -28,7 +28,7 @@ Se han completado los módulos correspondientes a los **MR 01 al MR 12**:
 - **MR 08 - Persistencia y Knowledge Base:** Base de datos SQLite asíncrona (`WAL`), repositorio de eventos y base de conocimiento de procesos con resolución curada y heurística.
 - **MR 09 - Gemini Integration Foundation:** `PrivacySanitizer` (redacción de secretos, JWT, AWS keys, URLs con auth), `GeminiContextBuilder`, y `GeminiClient` con reintentos y `CircuitBreaker`.
 - **MR 10 - Gemini Analysis Agent:** `AnalysisAgent` con modelo estructurado Pydantic (`AnalysisResult`), prompts versionados en español para lenguaje no técnico.
-- **MR 11 - Audio Output:** `AudioQueueManager` asíncrono con cancelación/interrupción, caché SHA-256 y cascada de fallbacks (`Gemini Audio` → `Piper TTS` → `espeak-ng`).
+- **MR 11 - Audio Output:** `AudioQueueManager` asíncrono con cancelación/interrupción, caché SHA-256 y cascada de fallbacks: `Piper TTS` (Primordial) → `espeak-ng` (Local) → `Gemini Audio` (Último recurso).
 - **MR 12 - End-to-End Narration Pipeline:** Integración completa en `NarrationPipeline`, detector basado en reglas y demostración funcional CLI.
 
 ---
