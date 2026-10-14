@@ -8,14 +8,20 @@ Uso:
 """
 
 import argparse
-import statistics
-import time
 from collections.abc import Sequence
+from pathlib import Path
+import statistics
+import sys
+import time
 
-from app.collectors import ProcessCollector
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from app.collectors import ProcessCollector  # noqa: E402
 
 
-def run_benchmark(collector: ProcessCollector, iterations: int, warmup: int) -> list[float]:
+def run_benchmark(
+    collector: ProcessCollector, iterations: int, warmup: int
+) -> list[float]:
     """Ejecuta el collector varias veces y mide cada recolección.
 
     Args:
@@ -46,8 +52,12 @@ def parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
         Los argumentos interpretados.
     """
     parser = argparse.ArgumentParser(description="Benchmark del ProcessCollector.")
-    parser.add_argument("--iterations", type=int, default=20, help="recolecciones medidas")
-    parser.add_argument("--warmup", type=int, default=2, help="recolecciones de calentamiento")
+    parser.add_argument(
+        "--iterations", type=int, default=20, help="recolecciones medidas"
+    )
+    parser.add_argument(
+        "--warmup", type=int, default=2, help="recolecciones de calentamiento"
+    )
     parser.add_argument("--no-cmdline", action="store_true", help="omite la cmdline")
     parser.add_argument("--cgroup", action="store_true", help="lee /proc/<pid>/cgroup")
     parser.add_argument("--username", action="store_true", help="consulta el usuario")
@@ -75,7 +85,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     durations_ms = run_benchmark(collector, args.iterations, args.warmup)
     stats = collector.last_stats
     mean_ms = statistics.fmean(durations_ms)
-    p95_ms = sorted(durations_ms)[min(len(durations_ms) - 1, int(len(durations_ms) * 0.95))]
+    sorted_durations = sorted(durations_ms)
+    p95_idx = min(len(sorted_durations) - 1, int(len(sorted_durations) * 0.95))
+    p95_ms = sorted_durations[p95_idx]
     print(f"Procesos vistos: {stats.seen} (leídos: {stats.collected}, "
           f"desaparecidos: {stats.vanished}, con error: {stats.failed})")
     print(f"Iteraciones: {args.iterations} (calentamiento: {args.warmup})")
