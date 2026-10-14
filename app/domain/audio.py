@@ -13,12 +13,12 @@ class AudioFormat(str, Enum):
 
 class AudioData(DomainModel):
     """Encapsula un buffer de audio generado."""
-    
+
     data: bytes
     """Bytes crudos del archivo de audio."""
-    
+
     format: AudioFormat
     """Formato del audio."""
-    
+
     hash_key: str
     """Hash del texto original para cacheo."""

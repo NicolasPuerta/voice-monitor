@@ -4,6 +4,7 @@ import threading
 import queue
 import hashlib
 import logging
+from typing import Any
 
 from app.domain.audio import AudioData
 from app.core.audio.interface import AudioGenerator, AudioPlayer
@@ -19,10 +20,14 @@ class AudioQueueManager:
         player: AudioPlayer,
         primary_generator: AudioGenerator,
         fallback_generators: list[AudioGenerator] | None = None,
+        health_manager: Any | None = None,
+        metrics: Any | None = None,
     ) -> None:
         self.player = player
         self.primary_generator = primary_generator
         self.fallback_generators = fallback_generators or []
+        self.health_manager = health_manager
+        self.metrics = metrics
 
         self.cache: dict[str, AudioData] = {}
 
@@ -76,7 +81,12 @@ class AudioQueueManager:
 
         # 2. Si no hay cache, generarlo probando por orden de prioridad
         if not audio:
-            audio = self._generate_with_fallback(text)
+            if self.metrics is not None:
+                with self.metrics.measure_audio_synthesis():
+                    audio = self._generate_with_fallback(text)
+            else:
+                audio = self._generate_with_fallback(text)
+
             if audio:
                 # Cache limitado a memoria temporal para no devorar RAM
                 if len(self.cache) > 100:
@@ -85,15 +95,34 @@ class AudioQueueManager:
 
         # 3. Reproducir (bloquea el worker hasta terminar el audio)
         if audio and not self._stop_event.is_set():
-            self.player.play(audio)
+            try:
+                if self.metrics is not None:
+                    with self.metrics.measure_audio_playback():
+                        self.player.play(audio)
+                else:
+                    self.player.play(audio)
+
+                if self.health_manager is not None:
+                    self.health_manager.record_success("audio")
+            except Exception as exc:
+                logger.error("Error reproduciendo audio: %s", exc)
+                if self.health_manager is not None:
+                    self.health_manager.record_failure("audio", reason=str(exc))
 
     def _generate_with_fallback(self, text: str) -> AudioData | None:
         engines = [self.primary_generator] + self.fallback_generators
         for engine in engines:
-            logger.debug(f"Intentando generar audio con {engine.name}...")
-            audio = engine.generate(text)
-            if audio:
-                return audio
+            logger.debug("Intentando generar audio con %s...", engine.name)
+            try:
+                audio = engine.generate(text)
+                if audio:
+                    return audio
+            except Exception as exc:
+                logger.debug("Motor %s falló: %s", engine.name, exc)
 
-        logger.warning("No se pudo generar audio con ningn motor.")
+        logger.warning("No se pudo generar audio con ningún motor.")
+        if self.health_manager is not None:
+            self.health_manager.record_failure(
+                "audio", reason="No audio engine available"
+            )
         return None

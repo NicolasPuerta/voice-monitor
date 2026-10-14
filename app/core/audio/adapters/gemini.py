@@ -2,6 +2,7 @@
 
 import hashlib
 import logging
+from typing import Any
 
 import google.generativeai as genai
 from google.api_core.exceptions import GoogleAPIError
@@ -23,11 +24,12 @@ class GeminiAudioGenerator(AudioGenerator):
         # Si el modelo no lo soporta, el API rechazar la solicitud.
         self.model_name = settings.gemini.model
 
+        self.model: Any | None = None
         if self.enabled and settings.gemini.api_key:
-            genai.configure(api_key=settings.gemini.api_key.get_secret_value())
-            self.model = genai.GenerativeModel(self.model_name)
-        else:
-            self.model = None
+            api_key = settings.gemini.api_key.get_secret_value()
+            genai.configure(api_key=api_key)  # type: ignore[attr-defined]
+            model_cls = genai.GenerativeModel  # type: ignore[attr-defined]
+            self.model = model_cls(self.model_name)
 
     @property
     def name(self) -> str:

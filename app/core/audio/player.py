@@ -59,7 +59,10 @@ class SystemAudioPlayer(AudioPlayer):
             self._process = None
 
     def _get_play_command(self, filepath: str, fmt: AudioFormat) -> list[str] | None:
-        """Determina el comando ms adecuado basado en las herramientas disponibles y el entorno WSL/Ubuntu."""
+        """Determina el comando más adecuado basado en herramientas
+
+        disponibles y el entorno WSL/Ubuntu.
+        """
 
         # Si es wav, aplay es lo ms nativo en linux
         if fmt == AudioFormat.WAV:
