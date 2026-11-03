@@ -16,7 +16,7 @@ from app.domain.gemini import GeminiContext, SafeEventSummary
 from app.domain.events import Event, EventMetadata, ScoreResult, ScoreBreakdown
 from app.domain.enums import EventType, EventSeverity, EventPriority
 from app.domain.context import SystemContext
-from app.domain.snapshots import ResourceSnapshot
+from app.domain.snapshots import PressureStall, ResourceSnapshot, SystemPressure
 from google.api_core.exceptions import ResourceExhausted
 
 NOW = datetime(2026, 1, 1, tzinfo=timezone.utc)
@@ -80,6 +80,43 @@ def test_gemini_context_builder_strips_secrets(sanitizer: PrivacySanitizer) -> N
 
     assert "AKIAIOSFODNN7EXAMPLE" not in ctx.process_knowledge
     assert "***AWS_KEY***" in ctx.process_knowledge
+
+
+def test_gemini_context_builder_includes_cpu_and_psi(
+    sanitizer: PrivacySanitizer,
+) -> None:
+    builder = GeminiContextBuilder(sanitizer)
+    event = Event(
+        event_type=EventType.CPU_SPIKE,
+        severity=EventSeverity.HIGH,
+        summary="CPU alta",
+        detected_at=NOW,
+    )
+    sys_ctx = SystemContext(
+        collected_at=NOW,
+        resources=ResourceSnapshot(
+            cpu_percent=87.5,
+            cpu_count_logical=8,
+            load_average=(6.0, 4.0, 2.0),
+            memory_total_bytes=16_000,
+            memory_used_bytes=4_000,
+            memory_available_bytes=12_000,
+            memory_percent=25.0,
+        ),
+        pressure=SystemPressure(
+            cpu_some=PressureStall(avg10=31.5, avg60=10.0, avg300=2.0),
+            io_some=PressureStall(avg10=4.0, avg60=1.0, avg300=0.5),
+        ),
+    )
+
+    ctx = builder.build(event, sys_ctx)
+
+    assert ctx.cpu_percent == 87.5
+    assert ctx.cpu_count_logical == 8
+    assert ctx.system_load_avg == (6.0, 4.0, 2.0)
+    assert ctx.cpu_pressure_avg10 == 31.5
+    assert ctx.memory_pressure_avg10 is None
+    assert ctx.io_pressure_avg10 == 4.0
 
 
 @patch("app.core.gemini.genai")

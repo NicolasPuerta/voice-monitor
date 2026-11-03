@@ -131,7 +131,7 @@ def main(argv: list[str] | None = None, run_loop: bool | None = None) -> int:
     )
 
     # 4. Pipeline Core
-    context_builder = SystemContextBuilder()
+    context_builder = SystemContextBuilder(health_manager)
     cpu_threshold = 0.1 if args.demo else 80.0
     detector = RuleBasedDetector(cpu_threshold=cpu_threshold)
     scoring = ScoringEngine()

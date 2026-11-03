@@ -17,6 +17,7 @@ from app.core.flow import EventGrouper, FlowController, PriorityQueue
 from app.core.gemini import GeminiContextBuilder
 from app.core.scoring import ScoringEngine
 from app.domain.enums import EventDecision
+from app.domain.context import SystemContext
 from app.domain.events import Event
 from app.storage import EventRepository, KnowledgeRepository
 
@@ -77,9 +78,9 @@ class NarrationPipeline:
             ttl_s=float(ttl_s) if isinstance(ttl_s, (int, float)) else 30.0
         )
 
-        # Worker de Gemini: (event, knowledge, load_avg, mem_pct, skip_audio)
+        # Worker de Gemini: (event, knowledge, contexto del tick, skip_audio)
         self._gemini_queue: queue.Queue[
-            tuple[Event, str | None, tuple[float, float, float], float, bool] | None
+            tuple[Event, str | None, SystemContext, bool] | None
         ] = queue.Queue()
         self._stop_event = threading.Event()
         self._gemini_thread = threading.Thread(target=self._gemini_worker, daemon=True)
@@ -162,29 +163,18 @@ class NarrationPipeline:
 
                 # Si es modo texto, se analiza con Gemini pero no se encola audio
                 if self.dnd_manager and self.dnd_manager.text_only:
-                    self._dispatch_to_gemini(
-                        event_to_speak,
-                        ctx.resources.load_average,
-                        ctx.resources.memory_percent,
-                        skip_audio=True,
-                    )
+                    self._dispatch_to_gemini(event_to_speak, ctx, skip_audio=True)
             else:
                 if eff_metrics is not None:
                     eff_metrics.record_decision(EventDecision.SPOKEN)
-                self._dispatch_to_gemini(
-                    event_to_speak,
-                    ctx.resources.load_average,
-                    ctx.resources.memory_percent,
-                    skip_audio=False,
-                )
+                self._dispatch_to_gemini(event_to_speak, ctx, skip_audio=False)
 
         return event_to_speak
 
     def _dispatch_to_gemini(
         self,
         event: Event,
-        load_avg: tuple[float, float, float] | None,
-        mem_pct: float | None,
+        ctx: SystemContext,
         skip_audio: bool = False,
     ) -> None:
         """Envía el evento al worker asíncrono guardándolo primero en BD."""
@@ -198,9 +188,7 @@ class NarrationPipeline:
             )
             knowledge = k.short_text
 
-        self._gemini_queue.put(
-            (event, knowledge, load_avg or (0, 0, 0), mem_pct or 0.0, skip_audio)
-        )
+        self._gemini_queue.put((event, knowledge, ctx, skip_audio))
 
     def _gemini_worker(self) -> None:
         """Hilo dedicado a comunicarse con Gemini protegiendo los collectors."""
@@ -210,7 +198,7 @@ class NarrationPipeline:
                 if item is None:
                     break
 
-                event, knowledge, load_avg, mem_pct, skip_audio = item
+                event, knowledge, ctx, skip_audio = item
 
                 if self.test_mode_gemini:
                     speech = f"Modo prueba: evento {event.summary}."
@@ -233,23 +221,7 @@ class NarrationPipeline:
                     self._gemini_queue.task_done()
                     continue
 
-                from app.domain.context import SystemContext
-                from app.domain.snapshots import ResourceSnapshot
-
-                dummy_ctx = SystemContext(
-                    collected_at=event.detected_at,
-                    resources=ResourceSnapshot(
-                        cpu_percent=0.0,
-                        cpu_count_logical=1,
-                        load_average=load_avg,
-                        memory_total_bytes=1000,
-                        memory_used_bytes=500,
-                        memory_available_bytes=500,
-                        memory_percent=mem_pct or 0.0,
-                    ),
-                )
-
-                gemini_ctx = self.gemini_builder.build(event, dummy_ctx, knowledge)
+                gemini_ctx = self.gemini_builder.build(event, ctx, knowledge)
 
                 failure_reason = "Respuesta de análisis nula"
                 try:

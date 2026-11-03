@@ -20,7 +20,9 @@ from app.core.privacy import PrivacySanitizer
 from app.core.replay import ReplayEngine
 from app.core.scoring import ScoringEngine
 from app.domain.enums import EventPriority, EventSeverity, EventType
+from app.domain.context import SystemContext
 from app.domain.events import Event, EventMetadata, ScoreBreakdown, ScoreResult
+from app.domain.snapshots import ResourceSnapshot
 from app.storage.db import BackgroundDatabase
 from app.storage.repositories import EventRepository, KnowledgeRepository
 from tests.fixtures.scenarios import (
@@ -171,7 +173,19 @@ def test_resilience_gemini_network_failure(
     )
 
     # La tubería procesa el evento enviándolo al worker de Gemini
-    pipeline._dispatch_to_gemini(ev, (1, 1, 1), 50.0)
+    ctx = SystemContext(
+        collected_at=BASE_TIME,
+        resources=ResourceSnapshot(
+            cpu_percent=90.0,
+            cpu_count_logical=8,
+            load_average=(1.0, 1.0, 1.0),
+            memory_total_bytes=16_000,
+            memory_used_bytes=8_000,
+            memory_available_bytes=8_000,
+            memory_percent=50.0,
+        ),
+    )
+    pipeline._dispatch_to_gemini(ev, ctx)
 
     # Damos tiempo al worker para procesar el intento fallido
     import time

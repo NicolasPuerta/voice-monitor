@@ -12,6 +12,7 @@ from app.core.privacy import PrivacySanitizer
 from app.domain.context import SystemContext
 from app.domain.events import Event
 from app.domain.gemini import GeminiContext, SafeEventSummary
+from app.domain.snapshots import PressureStall
 
 logger = logging.getLogger(__name__)
 
@@ -73,10 +74,19 @@ class GeminiContextBuilder:
 
         # Obtener los recursos bsicos y sanitizar
         resources = sys_ctx.resources
+        pressure = sys_ctx.pressure
+
+        def _avg10(stall: PressureStall | None) -> float | None:
+            return stall.avg10 if stall is not None else None
 
         return GeminiContext(
             system_load_avg=resources.load_average or (0.0, 0.0, 0.0),
             memory_percent=resources.memory_percent,
+            cpu_percent=resources.cpu_percent,
+            cpu_count_logical=resources.cpu_count_logical,
+            cpu_pressure_avg10=_avg10(pressure.cpu_some) if pressure else None,
+            memory_pressure_avg10=_avg10(pressure.memory_some) if pressure else None,
+            io_pressure_avg10=_avg10(pressure.io_some) if pressure else None,
             battery_percent=resources.battery_percent,
             battery_plugged=resources.battery_plugged,
             primary_event=primary,
