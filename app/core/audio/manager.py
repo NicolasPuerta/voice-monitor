@@ -7,7 +7,7 @@ import logging
 from typing import Any
 
 from app.domain.audio import AudioData
-from app.core.audio.interface import AudioGenerator, AudioPlayer
+from app.core.audio.interface import AudioGenerator, AudioPlayer, PlaybackObserver
 
 logger = logging.getLogger(__name__)
 
@@ -22,12 +22,14 @@ class AudioQueueManager:
         fallback_generators: list[AudioGenerator] | None = None,
         health_manager: Any | None = None,
         metrics: Any | None = None,
+        playback_observer: PlaybackObserver | None = None,
     ) -> None:
         self.player = player
         self.primary_generator = primary_generator
         self.fallback_generators = fallback_generators or []
         self.health_manager = health_manager
         self.metrics = metrics
+        self.playback_observer = playback_observer
 
         self.cache: dict[str, AudioData] = {}
 
@@ -95,6 +97,8 @@ class AudioQueueManager:
 
         # 3. Reproducir (bloquea el worker hasta terminar el audio)
         if audio and not self._stop_event.is_set():
+            if self.playback_observer is not None:
+                self.playback_observer.own_playback_started()
             try:
                 if self.metrics is not None:
                     with self.metrics.measure_audio_playback():
@@ -108,6 +112,9 @@ class AudioQueueManager:
                 logger.error("Error reproduciendo audio: %s", exc)
                 if self.health_manager is not None:
                     self.health_manager.record_failure("audio", reason=str(exc))
+            finally:
+                if self.playback_observer is not None:
+                    self.playback_observer.own_playback_finished()
 
     def _generate_with_fallback(self, text: str) -> AudioData | None:
         engines = [self.primary_generator] + self.fallback_generators

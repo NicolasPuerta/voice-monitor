@@ -82,7 +82,7 @@ def main(argv: list[str] | None = None, run_loop: bool | None = None) -> int:
     from app.storage.repositories import EventRepository, KnowledgeRepository
 
     try:
-        settings = Settings.load()
+        settings = Settings.load(env_file=Settings.find_default_env_file())
     except Exception as exc:
         print(f"Error cargando configuración: {exc}", file=sys.stderr)
         return 1
@@ -127,6 +127,7 @@ def main(argv: list[str] | None = None, run_loop: bool | None = None) -> int:
         primary_generator=piper,
         fallback_generators=fallbacks,
         health_manager=health_manager,
+        playback_observer=dnd_manager,
     )
 
     # 4. Pipeline Core
@@ -135,7 +136,7 @@ def main(argv: list[str] | None = None, run_loop: bool | None = None) -> int:
     detector = RuleBasedDetector(cpu_threshold=cpu_threshold)
     scoring = ScoringEngine()
     grouper = EventGrouper(window_s=3.0)
-    flow = FlowController(scoring)
+    flow = FlowController.from_settings(scoring, settings.narration)
 
     pipeline = NarrationPipeline(
         settings=settings,

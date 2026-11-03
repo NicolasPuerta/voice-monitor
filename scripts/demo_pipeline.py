@@ -81,6 +81,7 @@ def run_demo(
             primary_generator=piper,
             fallback_generators=fallbacks,
             health_manager=health_manager,
+            playback_observer=dnd_manager,
         )
 
     # 4. Core Pipeline
@@ -88,7 +89,7 @@ def run_demo(
     detector = RuleBasedDetector(cpu_threshold=0.1)  # Umbral para demo inmediata
     scoring = ScoringEngine()
     grouper = EventGrouper(window_s=2.0)
-    flow = FlowController(scoring)
+    flow = FlowController.from_settings(scoring, settings.narration)
 
     pipeline = NarrationPipeline(
         settings=settings,

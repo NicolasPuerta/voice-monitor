@@ -4,6 +4,8 @@ from datetime import timedelta
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import pytest
+
 from app.collectors.health import SourceHealthManager
 from app.core.analysis import AnalysisAgent
 from app.core.audio.manager import AudioQueueManager
@@ -150,11 +152,14 @@ def test_electron_saturation_and_anti_spam(tmp_path: Path) -> None:
     db.stop()
 
 
-def test_resilience_gemini_network_failure(tmp_path: Path) -> None:
+def test_resilience_gemini_network_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Verifica que fallos de red en Gemini degraden sin detener el monitoreo."""
     pipeline, db, health = _setup_pipeline(tmp_path, test_mode_gemini=False)
 
-    # Simulamos fallo continuo en el agente de análisis
+    # Simulamos Gemini configurado pero con fallo continuo en el agente de análisis
+    monkeypatch.setattr(pipeline, "_gemini_available", lambda: True)
     pipeline.analysis_agent.analyze = MagicMock(side_effect=Exception("Timeout 503"))
 
     ev = Event(

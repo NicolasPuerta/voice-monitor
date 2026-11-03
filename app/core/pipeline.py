@@ -71,7 +71,11 @@ class NarrationPipeline:
                 self.session_id, datetime.now(timezone.utc)
             )
 
-        self.priority_queue = PriorityQueue(ttl_s=30.0)
+        # NARRATION_EVENT_TTL_S; las pruebas pueden inyectar settings simulados
+        ttl_s = getattr(getattr(settings, "narration", None), "event_ttl_s", None)
+        self.priority_queue = PriorityQueue(
+            ttl_s=float(ttl_s) if isinstance(ttl_s, (int, float)) else 30.0
+        )
 
         # Worker de Gemini: (event, knowledge, load_avg, mem_pct, skip_audio)
         self._gemini_queue: queue.Queue[
@@ -208,17 +212,24 @@ class NarrationPipeline:
 
                 event, knowledge, load_avg, mem_pct, skip_audio = item
 
-                # Degradación elegante: revisar circuit breaker de Gemini
-                if self.health_manager and not self.health_manager.can_attempt("gemini"):
-                    logger.debug("Omitiendo Gemini por backoff/circuit breaker.")
-                    self._gemini_queue.task_done()
-                    continue
-
                 if self.test_mode_gemini:
                     speech = f"Modo prueba: evento {event.summary}."
                     logger.info("[TEST GEMINI] Analizado: %s", speech)
                     if not skip_audio and self.audio:
                         self.audio.enqueue(speech)
+                    self._gemini_queue.task_done()
+                    continue
+
+                # Sin Gemini configurado: narración local sin marcar fallo
+                if not self._gemini_available():
+                    self._speak_local(event, knowledge, skip_audio)
+                    self._gemini_queue.task_done()
+                    continue
+
+                # Degradación elegante: revisar circuit breaker de Gemini
+                if self.health_manager and not self.health_manager.can_attempt("gemini"):
+                    logger.debug("Omitiendo Gemini por backoff/circuit breaker.")
+                    self._speak_local(event, knowledge, skip_audio)
                     self._gemini_queue.task_done()
                     continue
 
@@ -240,11 +251,16 @@ class NarrationPipeline:
 
                 gemini_ctx = self.gemini_builder.build(event, dummy_ctx, knowledge)
 
-                if self.metrics:
-                    with self.metrics.measure_gemini():
+                failure_reason = "Respuesta de análisis nula"
+                try:
+                    if self.metrics:
+                        with self.metrics.measure_gemini():
+                            result = self.analysis_agent.analyze(gemini_ctx)
+                    else:
                         result = self.analysis_agent.analyze(gemini_ctx)
-                else:
-                    result = self.analysis_agent.analyze(gemini_ctx)
+                except Exception as exc:  # pylint: disable=broad-exception-caught
+                    result = None
+                    failure_reason = str(exc)
 
                 if result:
                     if self.health_manager:
@@ -255,11 +271,12 @@ class NarrationPipeline:
                 else:
                     if self.health_manager:
                         self.health_manager.record_failure(
-                            "gemini", reason="Respuesta de análisis nula"
+                            "gemini", reason=failure_reason
                         )
                     logger.warning(
-                        "[GEMINI FALLO] Retornó None. Monitoreo prosigue normalmente."
+                        "[GEMINI FALLO] %s. Se usa narración local.", failure_reason
                     )
+                    self._speak_local(event, knowledge, skip_audio)
 
                 self._gemini_queue.task_done()
 
@@ -269,6 +286,22 @@ class NarrationPipeline:
                 if self.health_manager:
                     self.health_manager.record_failure("gemini", reason=str(e))
                 logger.error("Error en worker de Gemini: %s", e)
+
+    def _gemini_available(self) -> bool:
+        """Indica si Gemini está habilitado y tiene API key configurada."""
+        gemini = self.settings.gemini
+        return bool(gemini.enabled and gemini.api_key)
+
+    def _speak_local(
+        self, event: Event, knowledge: str | None, skip_audio: bool
+    ) -> None:
+        """Narra el evento con un texto local cuando Gemini no está disponible."""
+        speech = event.summary.rstrip(".") + "."
+        if knowledge:
+            speech = f"{speech} {knowledge.rstrip('.')}."
+        logger.info("[NARRACIÓN LOCAL] %s", speech)
+        if not skip_audio and self.audio:
+            self.audio.enqueue(speech)
 
     def stop(self) -> None:
         """Detiene limpiamente el worker del pipeline."""

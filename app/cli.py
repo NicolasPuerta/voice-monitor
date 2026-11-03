@@ -235,10 +235,14 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def load_settings_safely(config_path: str | None) -> Settings:
-    """Carga la configuración permitiendo rutas personalizadas."""
+    """Carga la configuración permitiendo rutas personalizadas.
+
+    Sin ``--config`` se usa el primer archivo existente de
+    ``Settings.default_env_files()`` (``./.env`` o el config.env del usuario).
+    """
     if config_path:
         return Settings.load(env_file=Path(config_path))
-    return Settings.load()
+    return Settings.load(env_file=Settings.find_default_env_file())
 
 
 def cmd_start(args: argparse.Namespace, runtime: RuntimeManager) -> int:
@@ -297,6 +301,8 @@ def cmd_start(args: argparse.Namespace, runtime: RuntimeManager) -> int:
 
     current_pid = os.getpid()
     runtime.write_pid(current_pid)
+    # Un comando dejado por una ejecución anterior no debe aplicarse a esta
+    runtime.clear_commands()
 
     settings = load_settings_safely(args.config)
     log_level = "DEBUG" if args.debug else (args.verbosity or settings.app.log_level)
@@ -344,6 +350,7 @@ def cmd_start(args: argparse.Namespace, runtime: RuntimeManager) -> int:
         primary_generator=piper,
         fallback_generators=fallbacks,
         health_manager=health_manager,
+        playback_observer=dnd_manager,
     )
 
     # 6. Pipeline
@@ -352,7 +359,7 @@ def cmd_start(args: argparse.Namespace, runtime: RuntimeManager) -> int:
     detector = RuleBasedDetector(cpu_threshold=cpu_threshold)
     scoring = ScoringEngine()
     grouper = EventGrouper(window_s=3.0)
-    flow = FlowController(scoring)
+    flow = FlowController.from_settings(scoring, settings.narration)
 
     pipeline = NarrationPipeline(
         settings=settings,

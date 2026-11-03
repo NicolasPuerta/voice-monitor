@@ -278,6 +278,22 @@ class Settings(BaseModel):
     dnd: DndSettings = Field(default_factory=DndSettings)
     """Configuración de No Molestar."""
 
+    @staticmethod
+    def default_env_files() -> tuple[Path, ...]:
+        """Rutas candidatas de ``.env`` cuando no se indica ``--config``, en orden."""
+        return (
+            Path.cwd() / ".env",
+            Path.home() / ".config" / "ubuntu-voice-monitor" / "config.env",
+        )
+
+    @classmethod
+    def find_default_env_file(cls) -> Path | None:
+        """Retorna el primer ``.env`` predeterminado que exista, o ``None``."""
+        for candidate in cls.default_env_files():
+            if candidate.is_file():
+                return candidate
+        return None
+
     @classmethod
     def load(cls, env_file: Path | None = None) -> "Settings":
         """Carga la configuración desde el entorno y, opcionalmente, un ``.env``.

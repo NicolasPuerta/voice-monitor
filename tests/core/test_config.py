@@ -187,3 +187,30 @@ def test_source_code_contains_no_hardcoded_api_key() -> None:
     """Verifica que el código fuente no contenga claves con formato de Google."""
     for source_file in (PROJECT_ROOT / "app").rglob("*.py"):
         assert "AIza" not in source_file.read_text(encoding="utf-8"), source_file
+
+
+def test_find_default_env_file_prefers_cwd(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Sin --config se usa ./.env antes que el config.env del usuario."""
+    home = tmp_path / "home"
+    user_cfg = home / ".config" / "ubuntu-voice-monitor" / "config.env"
+    user_cfg.parent.mkdir(parents=True)
+    user_cfg.write_text("LOG_LEVEL=error\n", encoding="utf-8")
+    work = tmp_path / "work"
+    work.mkdir()
+    monkeypatch.setattr(Path, "home", lambda: home)
+    monkeypatch.chdir(work)
+
+    assert Settings.find_default_env_file() == user_cfg
+
+    (work / ".env").write_text("LOG_LEVEL=warning\n", encoding="utf-8")
+    assert Settings.find_default_env_file() == work / ".env"
+
+
+def test_find_default_env_file_returns_none_without_files(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    monkeypatch.chdir(tmp_path)
+    assert Settings.find_default_env_file() is None
