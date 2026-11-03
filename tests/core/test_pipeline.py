@@ -1,6 +1,6 @@
 """Prueba end-to-end simulada del Pipeline de Narración."""
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 from datetime import datetime, timezone
 import time
 
@@ -292,4 +292,30 @@ def test_pipeline_queue_uses_configured_event_ttl() -> None:
     pipeline, *_ = _build_pipeline_for_worker(settings, MagicMock(), MagicMock())
 
     assert pipeline.priority_queue.ttl_s == 45.0
+    pipeline.stop()
+
+
+def test_pipeline_adds_risk_engine_events_to_detection() -> None:
+    """Las señales del RiskEngine entran al pipeline como eventos detectados."""
+    pipeline, _, detector, grouper, flow = _build_pipeline_for_worker(
+        MagicMock(), MagicMock(), MagicMock()
+    )
+    risk_event = Event(
+        event_type=EventType.SERVICE_FAILED,
+        severity=EventSeverity.HIGH,
+        summary="El servicio 'web.service' falló",
+    )
+    signal = MagicMock()
+    pipeline.risk_engine = MagicMock()
+    pipeline.risk_engine.evaluate.return_value = [signal]
+    detector.detect.return_value = []
+    grouper.should_flush.return_value = False
+    flow.process_queue.return_value = None
+
+    with patch(
+        "app.core.pipeline.RiskEngine.signals_to_events", return_value=[risk_event]
+    ):
+        pipeline.step(NOW)
+
+    grouper.add.assert_called_once_with(risk_event, NOW)
     pipeline.stop()

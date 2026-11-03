@@ -16,6 +16,7 @@ class RiskCategory(str, Enum):
     ZOMBIE = "zombie"
     EXTREME_PRESSURE = "extreme_pressure"
     REPEATED_FAILURES = "repeated_failures"
+    SERVICE_FAILURE = "service_failure"
 
 
 class RiskLevel(str, Enum):

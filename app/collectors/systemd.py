@@ -17,6 +17,44 @@ from app.domain.systemd import ServiceState, SystemdSnapshot, UnitSnapshot
 logger = logging.getLogger(__name__)
 
 
+class JeepneySystemdClient:
+    """Cliente D-Bus de systemd en Python puro (jeepney), sin compilar nada.
+
+    Se usa cuando ``dbus-python`` no está instalado (requiere glib para
+    compilarse). Expone los mismos métodos de solo lectura de
+    ``org.freedesktop.systemd1.Manager`` que usa el collector.
+    """
+
+    def __init__(self, timeout_s: float = 5.0) -> None:
+        from jeepney import DBusAddress
+        from jeepney.io.blocking import open_dbus_connection
+
+        self.timeout_s = timeout_s
+        self._conn = open_dbus_connection(bus="SYSTEM")
+        self._manager = DBusAddress(
+            "/org/freedesktop/systemd1",
+            bus_name="org.freedesktop.systemd1",
+            interface="org.freedesktop.systemd1.Manager",
+        )
+
+    def _call(
+        self, method: str, signature: str | None = None, body: tuple[Any, ...] = ()
+    ) -> Any:
+        from jeepney import new_method_call
+
+        msg = new_method_call(self._manager, method, signature, body)
+        reply = self._conn.send_and_get_reply(msg, timeout=self.timeout_s)
+        return reply.body[0]
+
+    def ListUnits(self) -> Any:  # noqa: N802
+        """Lista todas las unidades cargadas."""
+        return self._call("ListUnits")
+
+    def ListUnitsFiltered(self, states: list[str]) -> Any:  # noqa: N802
+        """Lista las unidades en alguno de los estados indicados."""
+        return self._call("ListUnitsFiltered", "as", (states,))
+
+
 class SystemdCollector(Collector[SystemdSnapshot | None]):
     """Recolector de unidades y servicios de systemd vía D-Bus con caché."""
 
@@ -42,13 +80,17 @@ class SystemdCollector(Collector[SystemdSnapshot | None]):
     def _get_default_dbus_client() -> Any | None:
         """Intenta inicializar el cliente D-Bus hacia systemd si está disponible."""
         try:
-            import dbus  # type: ignore[import-not-found]
+            import dbus
 
             bus = dbus.SystemBus()
             systemd1 = bus.get_object(
                 "org.freedesktop.systemd1", "/org/freedesktop/systemd1"
             )
             return dbus.Interface(systemd1, "org.freedesktop.systemd1.Manager")
+        except Exception:
+            pass
+        try:
+            return JeepneySystemdClient()
         except Exception:
             return None
 

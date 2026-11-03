@@ -14,8 +14,14 @@ class RuleBasedDetector:
         cpu_threshold: float = 85.0,
         mem_threshold: float = 90.0,
         psi_threshold: float = 20.0,
+        app_cpu_threshold: float | None = None,
     ) -> None:
         self.cpu_threshold = cpu_threshold
+        # El uso por app está normalizado al total de CPUs: una app que satura
+        # 2 de 8 núcleos marca 25 %, así que suele necesitar un umbral menor.
+        self.app_cpu_threshold = (
+            cpu_threshold if app_cpu_threshold is None else app_cpu_threshold
+        )
         self.mem_threshold = mem_threshold
         self.psi_threshold = psi_threshold
 
@@ -42,7 +48,7 @@ class RuleBasedDetector:
 
         # 2. Application-level CPU
         for app in context.apps:
-            if app.cpu_percent >= self.cpu_threshold:
+            if app.cpu_percent >= self.app_cpu_threshold:
                 name = getattr(app, "display_name", getattr(app, "name", "app"))
                 events.append(
                     Event(
@@ -55,7 +61,7 @@ class RuleBasedDetector:
                             app_name=name,
                             metric_name="app_cpu",
                             metric_value=app.cpu_percent,
-                            threshold=self.cpu_threshold,
+                            threshold=self.app_cpu_threshold,
                             unit="%",
                         ),
                     )

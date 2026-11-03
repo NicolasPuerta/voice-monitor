@@ -55,6 +55,8 @@ class SystemContextBuilder:
         self._resource_collector: Any = None
         self._psi_collector: Any = None
         self._process_collector: Any = None
+        self._systemd_collector: Any = None
+        self._journald_collector: Any = None
 
     def build(
         self,
@@ -76,7 +78,8 @@ class SystemContextBuilder:
         if health_manager is None:
             health_manager = self._health_manager
 
-        if resources is None:
+        live = resources is None
+        if live:
             # Recolección en vivo: recursos, presión PSI y uptime del host.
             try:
                 from app.collectors.system import PSICollector, SystemResourceCollector
@@ -108,6 +111,9 @@ class SystemContextBuilder:
             except Exception:
                 processes = []
 
+        if live and systemd is None and journald is None:
+            systemd, journald = self._collect_linux_sources(health_manager)
+
         apps = self._group_processes(processes)
 
         health_states = {
@@ -130,6 +136,29 @@ class SystemContextBuilder:
             journald=journald,
             risk_signals=risk_signals,
         )
+
+    def _collect_linux_sources(
+        self, health_manager: SourceHealthManager
+    ) -> tuple[SystemdSnapshot | None, JournaldSnapshot | None]:
+        """Lee systemd y journald; si no están disponibles devuelve None."""
+        from app.collectors.journald import JournaldCollector
+        from app.collectors.systemd import SystemdCollector
+
+        if self._systemd_collector is None:
+            self._systemd_collector = SystemdCollector(health_manager)
+            self._journald_collector = JournaldCollector(health_manager)
+
+        systemd: SystemdSnapshot | None = None
+        journald: JournaldSnapshot | None = None
+        try:
+            systemd = self._systemd_collector.collect()
+        except Exception:  # pylint: disable=broad-exception-caught
+            systemd = None
+        try:
+            journald = self._journald_collector.collect()
+        except Exception:  # pylint: disable=broad-exception-caught
+            journald = None
+        return systemd, journald
 
     def _group_processes(
         self, processes: Iterable[ProcessSnapshot]

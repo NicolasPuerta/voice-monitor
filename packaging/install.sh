@@ -38,7 +38,8 @@ else
     echo "[!] 'narrator' no encontrado en PATH. Intentando instalación..."
     if command -v pipx >/dev/null 2>&1; then
         echo "[*] Instalando mediante pipx..."
-        pipx install "$PROJECT_DIR"
+        # journald necesita compilar systemd-python; si falla, se instala sin él
+        pipx install "$PROJECT_DIR[journald]" || pipx install "$PROJECT_DIR"
         NARRATOR_BIN="$(command -v narrator || echo "$HOME/.local/bin/narrator")"
     else
         echo "[!] pipx no está instalado. En Ubuntu 24.04/Debian 12 se recomienda:"

@@ -126,9 +126,9 @@ class ScoringEngine:
         if priority == EventPriority.CRITICAL:
             reasons.append("Prioridad mxima por severidad o score excepcional.")
         if breakdown.repetition_penalty >= 30.0:
-            reasons.append("Fuertemente penalizado por repeticin.")
+            reasons.append("Fuertemente penalizado por repetición.")
         if breakdown.novelty > 10.0:
             reasons.append("El evento es muy reciente (alta novedad).")
         if breakdown.relevance >= 20.0:
-            reasons.append("Afecta a una aplicacin interactiva del usuario.")
+            reasons.append("Afecta a una aplicación interactiva del usuario.")
         return reasons

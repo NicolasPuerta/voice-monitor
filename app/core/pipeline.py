@@ -15,6 +15,7 @@ from app.core.detector import RuleBasedDetector
 from app.core.dnd import DNDManager
 from app.core.flow import EventGrouper, FlowController, PriorityQueue
 from app.core.gemini import GeminiContextBuilder
+from app.core.risk import RiskEngine
 from app.core.scoring import ScoringEngine
 from app.domain.enums import EventDecision
 from app.domain.context import SystemContext
@@ -46,6 +47,7 @@ class NarrationPipeline:
         metrics: Any | None = None,
         session_id: str | None = None,
         session_repo: Any | None = None,
+        risk_engine: RiskEngine | None = None,
     ):
         self.settings = settings
         self.context_builder = context_builder
@@ -58,6 +60,7 @@ class NarrationPipeline:
         self.audio = audio_manager
         self.event_repo = event_repo
         self.knowledge_repo = knowledge_repo
+        self.risk_engine = risk_engine
         self.test_mode_gemini = test_mode_gemini
 
         self.dnd_manager = dnd_manager
@@ -105,8 +108,13 @@ class NarrationPipeline:
             else:
                 ctx = self.context_builder.build()
 
-        # 2. Detección
+        # 2. Detección: umbrales + señales de riesgo (OOM, servicios, estado D...)
         new_events = self.detector.detect(ctx, now)
+        if self.risk_engine is not None:
+            signals = self.risk_engine.evaluate(ctx, ctx.systemd, ctx.journald, now)
+            if signals:
+                ctx = ctx.model_copy(update={"risk_signals": tuple(signals)})
+                new_events.extend(RiskEngine.signals_to_events(signals))
         if eff_metrics is not None:
             eff_metrics.increment_counter("events_detected", len(new_events))
         for ev in new_events:
@@ -186,7 +194,8 @@ class NarrationPipeline:
             k = self.knowledge_repo.get_knowledge(
                 event.metadata.app_key, event.metadata.app_name or ""
             )
-            knowledge = k.short_text
+            # "Aplicación desconocida" no aporta nada a la narración
+            knowledge = k.short_text if k.source != "unknown" else None
 
         self._gemini_queue.put((event, knowledge, ctx, skip_audio))
 

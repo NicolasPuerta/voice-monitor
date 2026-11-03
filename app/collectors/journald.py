@@ -49,7 +49,7 @@ class JournaldCollector(Collector[JournaldSnapshot | None]):
     def _get_default_reader() -> Any | None:
         """Intenta inicializar el lector de systemd.journal si está disponible."""
         try:
-            from systemd import journal  # type: ignore[import-not-found]
+            from systemd import journal
 
             return journal.Reader()
         except Exception:
@@ -143,6 +143,9 @@ class JournaldCollector(Collector[JournaldSnapshot | None]):
             item = reader.get_next() if hasattr(reader, "get_next") else None
             if not item:
                 break
+            # seek_cursor() deja el lector sobre la última entrada ya leída
+            if self._cursor and item.get("__CURSOR") == self._cursor:
+                continue
             entry = self._parse_entry_dict(item, now)
             entries.append(entry)
             if entry.cursor:
@@ -161,7 +164,14 @@ class JournaldCollector(Collector[JournaldSnapshot | None]):
         """Interpreta un diccionario de journald y clasifica el evento."""
         msg = str(item.get("MESSAGE", ""))
         cursor = item.get("__CURSOR")
-        unit = item.get("_SYSTEMD_UNIT")
+        # Los mensajes de PID 1 sobre un servicio traen la unidad afectada en
+        # UNIT/USER_UNIT; _SYSTEMD_UNIT sería "init.scope".
+        unit = (
+            item.get("UNIT")
+            or item.get("USER_UNIT")
+            or item.get("COREDUMP_UNIT")
+            or item.get("_SYSTEMD_UNIT")
+        )
         identifier = item.get("SYSLOG_IDENTIFIER") or item.get("_COMM")
 
         prio = 6
@@ -173,7 +183,11 @@ class JournaldCollector(Collector[JournaldSnapshot | None]):
 
         # Timestamp
         ts = default_now
-        if "__REALTIME_TIMESTAMP" in item:
+        realtime = item.get("__REALTIME_TIMESTAMP")
+        if isinstance(realtime, datetime):
+            # systemd.journal.Reader ya convierte el campo a datetime
+            ts = realtime if realtime.tzinfo else realtime.astimezone(timezone.utc)
+        elif realtime is not None:
             try:
                 usec = int(item["__REALTIME_TIMESTAMP"])
                 ts = datetime.fromtimestamp(usec / 1_000_000, tz=timezone.utc)

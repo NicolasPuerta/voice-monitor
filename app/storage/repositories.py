@@ -151,7 +151,7 @@ class KnowledgeRepository:
         # 3. Fallback genrico
         return ProcessKnowledge(
             key=app_key,
-            short_text=f"Aplicacin desconocida: {name}.",
+            short_text=f"Aplicación desconocida: {name}.",
             long_text="Proceso detectado sin firma en la base de conocimientos.",
             category="unknown",
             source="unknown",

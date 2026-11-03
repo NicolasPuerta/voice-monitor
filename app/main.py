@@ -77,6 +77,7 @@ def main(argv: list[str] | None = None, run_loop: bool | None = None) -> int:
     from app.core.logging import configure_logging, get_logger
     from app.core.pipeline import NarrationPipeline
     from app.core.privacy import PrivacySanitizer
+    from app.core.risk import RiskEngine
     from app.core.scoring import ScoringEngine
     from app.storage.db import BackgroundDatabase
     from app.storage.repositories import EventRepository, KnowledgeRepository
@@ -133,7 +134,10 @@ def main(argv: list[str] | None = None, run_loop: bool | None = None) -> int:
     # 4. Pipeline Core
     context_builder = SystemContextBuilder(health_manager)
     cpu_threshold = 0.1 if args.demo else 80.0
-    detector = RuleBasedDetector(cpu_threshold=cpu_threshold)
+    app_cpu_threshold = 0.1 if args.demo else 25.0
+    detector = RuleBasedDetector(
+        cpu_threshold=cpu_threshold, app_cpu_threshold=app_cpu_threshold
+    )
     scoring = ScoringEngine()
     grouper = EventGrouper(window_s=3.0)
     flow = FlowController.from_settings(scoring, settings.narration)
@@ -153,6 +157,7 @@ def main(argv: list[str] | None = None, run_loop: bool | None = None) -> int:
         test_mode_gemini=args.test_gemini,
         dnd_manager=dnd_manager,
         health_manager=health_manager,
+        risk_engine=RiskEngine(),
     )
 
     logger.info(

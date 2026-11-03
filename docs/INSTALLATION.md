@@ -80,7 +80,8 @@ source .venv/bin/activate
 pip install --upgrade pip
 
 # 6. Instalar dependencias del proyecto, desarrollo y reportes
-pip install -e ".[dev,reports]"
+#    (journald requiere: sudo apt install libsystemd-dev pkg-config)
+pip install -e ".[dev,reports,journald]"
 
 # 7. Validar que los comandos estén disponibles en el venv
 narrator --help

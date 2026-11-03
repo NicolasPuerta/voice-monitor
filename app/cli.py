@@ -28,6 +28,7 @@ from app.core.context import SystemContextBuilder
 from app.core.detector import RuleBasedDetector
 from app.core.dnd import DNDManager
 from app.core.flow import EventGrouper, FlowController
+from app.core.risk import RiskEngine
 from app.core.gemini import GeminiClient, GeminiContextBuilder
 from app.core.logging import configure_logging, get_logger
 from app.core.pipeline import NarrationPipeline
@@ -356,7 +357,10 @@ def cmd_start(args: argparse.Namespace, runtime: RuntimeManager) -> int:
     # 6. Pipeline
     context_builder = SystemContextBuilder(health_manager)
     cpu_threshold = 0.1 if args.demo else 80.0
-    detector = RuleBasedDetector(cpu_threshold=cpu_threshold)
+    app_cpu_threshold = 0.1 if args.demo else 25.0
+    detector = RuleBasedDetector(
+        cpu_threshold=cpu_threshold, app_cpu_threshold=app_cpu_threshold
+    )
     scoring = ScoringEngine()
     grouper = EventGrouper(window_s=3.0)
     flow = FlowController.from_settings(scoring, settings.narration)
@@ -378,6 +382,7 @@ def cmd_start(args: argparse.Namespace, runtime: RuntimeManager) -> int:
         health_manager=health_manager,
         session_id=session_id,
         session_repo=session_repo,
+        risk_engine=RiskEngine(),
     )
 
     app_logger.info("Monitor iniciado con éxito. Sesión: %s", session_id)
