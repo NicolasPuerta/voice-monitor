@@ -12,7 +12,7 @@ dependencies = [
     "pydantic>=2.7",
     "pydantic-settings>=2.3",
     "psutil>=5.9",
-    "google-generativeai>=0.5.0",
+    "google-genai>=1.20",
     "jinja2>=3.1",
     # Cliente D-Bus en Python puro para leer el estado de systemd
     "jeepney>=0.8",

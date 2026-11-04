@@ -197,6 +197,12 @@ class GeminiSettings(_GroupSettings):
     api_key: SecretStr | None = None
     """API key de Gemini; solo se lee del entorno y nunca se muestra en logs."""
 
+    tts_model: str = Field(default="gemini-2.5-flash-preview-tts", min_length=1)
+    """Modelo de voz de Gemini (último recurso de narración tras Piper y espeak-ng)."""
+
+    tts_voice: str = Field(default="Kore", min_length=1)
+    """Voz preconstruida del modelo TTS de Gemini."""
+
     @model_validator(mode="after")
     def _validate_api_key(self) -> "GeminiSettings":
         """Valida que exista API key cuando Gemini está habilitado.

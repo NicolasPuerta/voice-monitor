@@ -4,8 +4,9 @@ import time
 import logging
 from enum import Enum
 from typing import Any
-import google.generativeai as genai
-from google.api_core.exceptions import ResourceExhausted, DeadlineExceeded, RetryError
+import httpx
+from google import genai
+from google.genai import errors, types
 
 from app.core.config import Settings
 from app.core.privacy import PrivacySanitizer
@@ -112,28 +113,53 @@ class GeminiContextBuilder:
         )
 
 
-class GeminiClient:
-    """Cliente oficial de Gemini. Aislado de collectors y de psutil."""
+# Códigos HTTP transitorios que vale la pena reintentar
+RETRYABLE_STATUS = frozenset({429, 500, 502, 503, 504})
 
-    def __init__(self, settings: Settings, circuit_breaker: CircuitBreaker | None = None):
+
+class GeminiClient:
+    """Cliente oficial de Gemini (SDK ``google-genai``). Aislado de collectors."""
+
+    def __init__(
+        self,
+        settings: Settings,
+        circuit_breaker: CircuitBreaker | None = None,
+        timeout_s: float = 30.0,
+    ):
         self.settings = settings
         self.enabled = settings.gemini.enabled
         self.model_name = settings.gemini.model
 
-        self.model: Any | None = None
+        self.client: Any | None = None
         # Nunca se loguea la API key.
         if self.enabled and settings.gemini.api_key:
-            api_key = settings.gemini.api_key.get_secret_value()
-            genai.configure(api_key=api_key)  # type: ignore[attr-defined]
-            model_cls = genai.GenerativeModel  # type: ignore[attr-defined]
-            self.model = model_cls(self.model_name)
+            self.client = genai.Client(
+                api_key=settings.gemini.api_key.get_secret_value(),
+                http_options=types.HttpOptions(timeout=int(timeout_s * 1000)),
+            )
 
         self.circuit_breaker = circuit_breaker or CircuitBreaker()
         self.max_retries = 2
 
+    def _build_config(
+        self, system_instruction: str | None
+    ) -> types.GenerateContentConfig:
+        """Configura JSON nativo y, en modelos flash, desactiva el razonamiento."""
+        thinking = None
+        # El razonamiento añade segundos de latencia a una narración que debe ser
+        # inmediata; los modelos flash permiten desactivarlo (presupuesto 0).
+        if "flash" in self.model_name:
+            thinking = types.ThinkingConfig(thinking_budget=0)
+        return types.GenerateContentConfig(
+            system_instruction=system_instruction,
+            response_mime_type="application/json",
+            temperature=0.3,
+            thinking_config=thinking,
+        )
+
     def generate(self, prompt: str, system_instruction: str | None = None) -> str | None:
-        """Enva un prompt a Gemini y retorna el texto generado."""
-        if not self.enabled or not self.model:
+        """Envía un prompt a Gemini y retorna el texto generado."""
+        if not self.enabled or not self.client:
             logger.debug("Gemini deshabilitado. No se realiza llamada externa.")
             return None
 
@@ -141,29 +167,37 @@ class GeminiClient:
             logger.warning("Llamada denegada por el Circuit Breaker.")
             return None
 
-        # Si el modelo no soporta system_instruction nativo en init, lo pre-pendemos.
-        full_prompt = prompt
-        if system_instruction:
-            full_prompt = f"{system_instruction}\n\n=== DATOS ===\n{prompt}"
-
+        config = self._build_config(system_instruction)
         for attempt in range(self.max_retries + 1):
             try:
-                response = self.model.generate_content(full_prompt)
+                response = self.client.models.generate_content(
+                    model=self.model_name, contents=prompt, config=config
+                )
                 self.circuit_breaker.record_success()
-                if response and hasattr(response, "text") and response.text is not None:
-                    return str(response.text)
-                return None
-            except ResourceExhausted:
-                # Rate limit (429)
-                logger.warning("Gemini Rate Limit Excedido.")
+                text = getattr(response, "text", None)
+                return str(text) if text else None
+            except errors.APIError as e:
                 self.circuit_breaker.record_failure()
-                time.sleep(2**attempt)  # Backoff exponencial dbil
-            except (DeadlineExceeded, RetryError) as e:
-                logger.error(f"Error de red/Timeout llamando a Gemini: {e}")
+                if e.code not in RETRYABLE_STATUS:
+                    # 400/401/403/404: clave, modelo o petición inválidos
+                    logger.error("Gemini rechazó la petición (%s): %s", e.code, e.message)
+                    break
+                if e.code == 429:
+                    logger.warning("Gemini Rate Limit Excedido.")
+                else:
+                    logger.warning("Gemini no disponible temporalmente (%s).", e.code)
+            except httpx.TransportError as e:
+                # Timeouts y errores de conexión
+                logger.error("Error de red/Timeout llamando a Gemini: %s", e)
                 self.circuit_breaker.record_failure()
-            except Exception as e:
-                logger.error(f"Error inesperado de Gemini: {e}")
+            except Exception as e:  # pylint: disable=broad-exception-caught
+                logger.error("Error inesperado de Gemini: %s", e)
                 self.circuit_breaker.record_failure()
                 break  # Errores no transitorios no se reintentan
+
+            if attempt < self.max_retries and self.circuit_breaker.can_execute():
+                time.sleep(2**attempt)  # Backoff exponencial
+            else:
+                break
 
         return None

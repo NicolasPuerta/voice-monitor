@@ -361,7 +361,7 @@ python scripts/demo_pipeline.py --test-gemini
 ## 7. Configuración y Funcionamiento de Gemini
 
 ### 7.1 Integración y SDK
-- **SDK Oficial:** Utiliza la librería `google-generativeai` configurada de forma aislada en `GeminiClient` (`app.core.gemini`).
+- **SDK Oficial:** Utiliza el SDK `google-genai` configurado de forma aislada en `GeminiClient` (`app.core.gemini`).
 - **Modelo Predeterminado:** `gemini-2.5-flash`.
 - **Estructura de Datos Enviada:** Únicamente se envía un objeto `GeminiContext` que contiene el resumen seguro del evento (`SafeEventSummary`: nombre de aplicación sanitizado, tipo de evento, severidad, puntaje y duración) y las métricas globales del sistema (promedio de carga y % de memoria).
 - **Respuesta Estructurada:** El modelo genera respuestas orientadas a personas mediante esquemas estructurados de análisis (`AnalysisResult`) que priorizan la claridad y la brevedad.

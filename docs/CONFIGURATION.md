@@ -37,6 +37,8 @@ La configuración se evalúa según la siguiente jerarquía estricta (el nivel s
 | **`GEMINI_ENABLED`** | `bool` (`true`/`false`) | No | `false` | Habilita el análisis cognitivo mediante la API en la nube de Google Gemini. |
 | **`GEMINI_MODEL`** | `string` | No | `gemini-2.5-flash` | Modelo de Gemini utilizado para analizar el contexto del sistema. |
 | **`GEMINI_API_KEY`** | `string` (secreto) | **Sí** (si Gemini habilitado) | `None` | Clave de acceso a la API de Google Gemini (nunca se muestra en logs). |
+| **`GEMINI_TTS_MODEL`** | `string` | No | `gemini-2.5-flash-preview-tts` | Modelo de voz de Gemini, último recurso de narración si fallan Piper y espeak-ng. |
+| **`GEMINI_TTS_VOICE`** | `string` | No | `Kore` | Voz preconstruida del modelo TTS de Gemini. |
 | **`STORAGE_DB_PATH`** | `string` (ruta) | No | `~/.local/share/ubuntu-voice-monitor/events.db` | Ruta del archivo de base de datos SQLite donde se persisten eventos y sesiones. |
 | **`PRIVACY_REDACT_HOME`** | `bool` (`true`/`false`) | No | `true` | Enmascara automáticamente la ruta del directorio home (`/home/<user>`) por `~`. |
 | **`DND_ENABLED`** | `bool` (`true`/`false`) | No | `false` | Activa el modo No Molestar manualmente desde configuración (silencia altavoz). |
