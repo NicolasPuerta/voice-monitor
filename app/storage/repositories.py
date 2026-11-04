@@ -202,3 +202,38 @@ class SourceHealthRepository:
             "ORDER BY updated_at ASC",
             (session_id,),
         )
+
+
+class MinuteAggRepository:
+    """Guarda agregados por minuto (min/max/promedio) de métricas de la sesión."""
+
+    def __init__(self, db: BackgroundDatabase) -> None:
+        self.db = db
+
+    def save_minute(
+        self,
+        session_id: str,
+        minute: datetime,
+        metric_name: str,
+        values: list[float],
+    ) -> None:
+        if not values:
+            return
+        self.db.execute_async(
+            """
+            INSERT INTO minute_agg (
+                id, session_id, minute_timestamp, metric_name,
+                min_val, max_val, avg_val, count
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                str(uuid.uuid4()),
+                session_id,
+                minute.isoformat(),
+                metric_name,
+                min(values),
+                max(values),
+                sum(values) / len(values),
+                len(values),
+            ),
+        )

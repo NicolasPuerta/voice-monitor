@@ -150,6 +150,9 @@ class NarrationSettings(_GroupSettings):
     event_ttl_s: float = Field(default=60.0, gt=0)
     """Segundos de vigencia de un evento antes de descartarse sin narrar."""
 
+    repeat_cooldown_s: float = Field(default=120.0, ge=0)
+    """Segundos sin repetir un aviso del mismo tipo y aplicación (salvo críticos)."""
+
     piper_model_path: str | None = None
     """Ruta opcional al modelo .onnx de Piper TTS."""
 

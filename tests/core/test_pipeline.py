@@ -319,3 +319,107 @@ def test_pipeline_adds_risk_engine_events_to_detection() -> None:
 
     grouper.add.assert_called_once_with(risk_event, NOW)
     pipeline.stop()
+
+
+def _real_scoring_pipeline(
+    settings: MagicMock,
+) -> tuple[NarrationPipeline, MagicMock, MagicMock]:
+    from app.core.flow import EventGrouper, FlowController
+    from app.core.scoring import ScoringEngine
+
+    scoring = ScoringEngine()
+    detector = MagicMock()
+    event_repo = MagicMock()
+    context_builder = MagicMock()
+    ctx = MagicMock()
+    ctx.apps = []
+    ctx.resources.cpu_percent = 40.0
+    ctx.resources.memory_percent = 55.0
+    context_builder.build.return_value = ctx
+    pipeline = NarrationPipeline(
+        settings=settings,
+        context_builder=context_builder,
+        detector=detector,
+        scoring=scoring,
+        grouper=EventGrouper(window_s=0.0),
+        flow_controller=FlowController(scoring, burst_limit=5, cooldown_s=0.0),
+        gemini_builder=MagicMock(),
+        analysis_agent=MagicMock(),
+        audio_manager=None,
+        event_repo=event_repo,
+        knowledge_repo=None,
+        health_manager=SourceHealthManager(),
+    )
+    return pipeline, detector, event_repo
+
+
+def _cpu_event(at: datetime, severity: EventSeverity = EventSeverity.HIGH) -> Event:
+    return Event(
+        event_type=EventType.CPU_SPIKE,
+        severity=severity,
+        summary="Alta CPU en stress",
+        detected_at=at,
+        metadata=EventMetadata(app_key="exe:/usr/bin/stress", app_name="stress"),
+    )
+
+
+def test_pipeline_does_not_repeat_same_alert_within_cooldown() -> None:
+    """La misma alerta sostenida se narra una vez por NARRATION_REPEAT_COOLDOWN_S."""
+    from datetime import timedelta
+
+    settings = MagicMock()
+    settings.gemini.enabled = False
+    settings.narration.repeat_cooldown_s = 120.0
+    pipeline, detector, _ = _real_scoring_pipeline(settings)
+
+    spoken = []
+    for offset in (0, 15, 30, 125):
+        at = NOW + timedelta(seconds=offset)
+        detector.detect.return_value = [_cpu_event(at)]
+        if pipeline.step(at) is not None:
+            spoken.append(offset)
+    pipeline.stop()
+
+    assert spoken == [0, 125]
+
+
+def test_pipeline_critical_alerts_bypass_repeat_cooldown() -> None:
+    from datetime import timedelta
+
+    settings = MagicMock()
+    settings.gemini.enabled = False
+    settings.narration.repeat_cooldown_s = 120.0
+    pipeline, detector, _ = _real_scoring_pipeline(settings)
+
+    spoken = 0
+    for offset in (0, 15):
+        at = NOW + timedelta(seconds=offset)
+        detector.detect.return_value = [_cpu_event(at, EventSeverity.CRITICAL)]
+        if pipeline.step(at) is not None:
+            spoken += 1
+    pipeline.stop()
+
+    assert spoken == 2
+
+
+def test_pipeline_writes_minute_aggregates() -> None:
+    """CPU y memoria de cada tick se agregan por minuto para el informe."""
+    from datetime import timedelta
+
+    settings = MagicMock()
+    settings.gemini.enabled = False
+    pipeline, detector, _ = _real_scoring_pipeline(settings)
+    pipeline.minute_repo = MagicMock()
+    detector.detect.return_value = []
+
+    pipeline.step(NOW)
+    pipeline.step(NOW + timedelta(seconds=5))
+    pipeline.minute_repo.save_minute.assert_not_called()
+
+    pipeline.step(NOW + timedelta(seconds=65))  # cambia el minuto
+    saved = pipeline.minute_repo.save_minute.call_args_list
+    calls = {c.args[2]: c.args[3] for c in saved}
+    assert calls == {"cpu": [40.0, 40.0], "memory": [55.0, 55.0]}
+
+    pipeline.stop()  # guarda el minuto en curso
+    assert pipeline.minute_repo.save_minute.call_count == 4

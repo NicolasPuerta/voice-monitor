@@ -32,6 +32,9 @@ logger = logging.getLogger(__name__)
 # Remitentes de journald que informan con autoridad sobre caídas de servicios.
 SERVICE_MANAGER_IDENTIFIERS = frozenset({"systemd", "systemd-coredump"})
 
+# PID de kthreadd, padre de todos los hilos del kernel en Linux.
+KTHREADD_PID = 2
+
 
 class RiskEngine:
     """Evalúa el estado del sistema y produce señales de riesgo estructuradas."""
@@ -155,6 +158,10 @@ class RiskEngine:
             all_processes.extend(app.processes)
 
         for proc in all_processes:
+            # Los hilos del kernel (kworker, jbd2...; hijos de kthreadd, PID 2)
+            # pasan por estado D de forma rutinaria, p. ej. i915_flip en cada vblank.
+            if proc.pid == KTHREADD_PID or proc.parent_pid == KTHREADD_PID:
+                continue
             st = (proc.status or "").lower()
             if st in ("disk-sleep", "d"):
                 active_d_pids.add(proc.pid)

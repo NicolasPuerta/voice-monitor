@@ -15,8 +15,9 @@ logger = logging.getLogger(__name__)
 DEFAULT_PROC_ASOUND = Path("/proc/asound")
 DEFAULT_SYS_VIDEO = Path("/sys/class/video4linux")
 # PipeWire/WirePlumber mantiene el PCM en RUNNING ~5 s tras el último sonido
-# (session.suspend-timeout-seconds); se añade margen para no detectarnos a nosotros.
-DEFAULT_SELF_PLAYBACK_GRACE_S = 6.0
+# (session.suspend-timeout-seconds; medido 5.1 s en Ubuntu 24.04). Con 6 s un
+# aviso detectado justo tras una narración caía en el borde y se silenciaba.
+DEFAULT_SELF_PLAYBACK_GRACE_S = 8.0
 
 
 class DNDManager:

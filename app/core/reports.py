@@ -543,7 +543,8 @@ class ReportService:
             confidence_counts[conf] = confidence_counts.get(conf, 0) + 1
 
             # Decisión
-            dec = ev.get("decision") or "UNKNOWN"
+            # SQLite guarda el valor del enum en minúsculas ("spoken")
+            dec = str(ev.get("decision") or "UNKNOWN").upper()
             decisions_breakdown[dec] = decisions_breakdown.get(dec, 0) + 1
 
             # Parsear metadata JSON de forma segura

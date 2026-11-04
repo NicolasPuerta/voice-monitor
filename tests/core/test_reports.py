@@ -268,3 +268,43 @@ def test_report_service_pdf_fallback_when_weasyprint_unavailable(sample_db: Path
             service.generate_pdf("session_test_123")
         assert "WeasyPrint no está disponible" in str(exc_info.value)
         assert "pip install weasyprint" in str(exc_info.value)
+
+
+def test_report_reads_data_as_written_by_the_monitor(tmp_path: Path) -> None:
+    """Decisiones en minúsculas (valor del enum) y picos desde minute_agg."""
+    import time
+
+    from app.domain.enums import EventDecision, EventSeverity, EventType
+    from app.domain.events import Event
+    from app.storage.repositories import (
+        EventRepository,
+        MinuteAggRepository,
+        SessionRepository,
+    )
+
+    db_file = tmp_path / "live.db"
+    db = BackgroundDatabase(db_file)
+    start = datetime(2026, 11, 3, 22, 0, tzinfo=timezone.utc)
+    SessionRepository(db).start_session("s-live", start)
+    events = EventRepository(db)
+    for decision in (EventDecision.SPOKEN, EventDecision.SPOKEN, EventDecision.DND):
+        ev = Event(
+            event_type=EventType.CPU_SPIKE,
+            severity=EventSeverity.HIGH,
+            summary="Alta CPU",
+            detected_at=start,
+        )
+        ev.decision = decision  # type: ignore[misc]
+        events.save_event("s-live", ev)
+    minutes = MinuteAggRepository(db)
+    minutes.save_minute("s-live", start, "cpu", [12.0, 41.5, 30.0])
+    minutes.save_minute("s-live", start, "memory", [55.0, 56.5])
+    time.sleep(0.3)
+    db.stop()
+
+    data = ReportService(db_file).fetch_report_data("s-live")
+
+    assert "2 narrados por voz" in data.summary
+    assert len(data.dnd_periods) == 1
+    assert data.cpu_peak == 41.5
+    assert data.memory_peak == 56.5

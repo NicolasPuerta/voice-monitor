@@ -100,8 +100,8 @@ def test_risk_engine_d_state_consecutive_ticks() -> None:
 
     proc = ProcessSnapshot(
         pid=901,
-        name="kworker/u",
-        parent_pid=2,
+        name="rsync",
+        parent_pid=1500,
         status="disk-sleep",
     )
     ctx = make_dummy_context(processes=[proc])
@@ -122,14 +122,26 @@ def test_risk_engine_d_state_consecutive_ticks() -> None:
     # Tick 3: proceso vuelve a estado 'running' -> se limpia el historial
     proc_running = ProcessSnapshot(
         pid=901,
-        name="kworker/u",
-        parent_pid=2,
+        name="rsync",
+        parent_pid=1500,
         status="running",
     )
     ctx_recovered = make_dummy_context(processes=[proc_running])
     sigs_tick3 = engine.evaluate(ctx_recovered, now=NOW)
     assert len(sigs_tick3) == 0
     assert 901 not in engine._d_state_consecutive_ticks
+
+
+def test_risk_engine_ignores_kernel_threads_in_d_state() -> None:
+    """kworker (hijo de kthreadd) en estado D es rutinario, no un riesgo."""
+    engine = RiskEngine(d_state_ticks_threshold=2)
+    kworker = ProcessSnapshot(
+        pid=12899, name="kworker/u33:0+i915_flip", parent_pid=2, status="disk-sleep"
+    )
+    ctx = make_dummy_context(processes=[kworker])
+    assert engine.evaluate(ctx, now=NOW) == []
+    assert engine.evaluate(ctx, now=NOW) == []
+    assert engine.evaluate(ctx, now=NOW) == []
 
 
 def test_risk_engine_zombie_accumulation() -> None:

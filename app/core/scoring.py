@@ -49,6 +49,13 @@ class ScoringEngine:
         key = self._get_history_key(event)
         self._history.setdefault(key, []).append(now)
 
+    def seconds_since_spoken(self, event: Event, now: datetime) -> float | None:
+        """Segundos desde que se narró un evento equivalente, o None si nunca."""
+        history = self._history.get(self._get_history_key(event))
+        if not history:
+            return None
+        return (now - max(history)).total_seconds()
+
     def _get_history_key(self, event: Event) -> str:
         app_key = event.metadata.app_key or "system"
         return f"{event.event_type.value}:{app_key}"

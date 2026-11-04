@@ -43,6 +43,7 @@ from app.storage.db import BackgroundDatabase
 from app.storage.repositories import (
     EventRepository,
     KnowledgeRepository,
+    MinuteAggRepository,
     SessionRepository,
     SourceHealthRepository,
 )
@@ -405,6 +406,7 @@ def cmd_start(args: argparse.Namespace, runtime: RuntimeManager) -> int:
         session_id=session_id,
         session_repo=session_repo,
         risk_engine=RiskEngine(),
+        minute_repo=MinuteAggRepository(db),
     )
 
     app_logger.info("Monitor iniciado con éxito. Sesión: %s", session_id)

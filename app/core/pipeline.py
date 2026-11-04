@@ -17,10 +17,10 @@ from app.core.flow import EventGrouper, FlowController, PriorityQueue
 from app.core.gemini import GeminiContextBuilder
 from app.core.risk import RiskEngine
 from app.core.scoring import ScoringEngine
-from app.domain.enums import EventDecision
+from app.domain.enums import EventDecision, EventSeverity
 from app.domain.context import SystemContext
 from app.domain.events import Event
-from app.storage import EventRepository, KnowledgeRepository
+from app.storage import EventRepository, KnowledgeRepository, MinuteAggRepository
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +48,7 @@ class NarrationPipeline:
         session_id: str | None = None,
         session_repo: Any | None = None,
         risk_engine: RiskEngine | None = None,
+        minute_repo: MinuteAggRepository | None = None,
     ):
         self.settings = settings
         self.context_builder = context_builder
@@ -68,6 +69,10 @@ class NarrationPipeline:
         self.metrics = metrics
         self.session_id = session_id or "current_session"
         self.session_repo = session_repo
+        # Muestras de CPU/memoria del minuto en curso (para los picos del informe)
+        self.minute_repo = minute_repo
+        self._minute: datetime | None = None
+        self._minute_samples: dict[str, list[float]] = {"cpu": [], "memory": []}
 
         if self.session_repo and self.session_id:
             from datetime import timezone
@@ -76,7 +81,12 @@ class NarrationPipeline:
             )
 
         # NARRATION_EVENT_TTL_S; las pruebas pueden inyectar settings simulados
-        ttl_s = getattr(getattr(settings, "narration", None), "event_ttl_s", None)
+        narration = getattr(settings, "narration", None)
+        ttl_s = getattr(narration, "event_ttl_s", None)
+        cooldown_s = getattr(narration, "repeat_cooldown_s", None)
+        self.repeat_cooldown_s = (
+            float(cooldown_s) if isinstance(cooldown_s, (int, float)) else 120.0
+        )
         self.priority_queue = PriorityQueue(
             ttl_s=float(ttl_s) if isinstance(ttl_s, (int, float)) else 30.0
         )
@@ -108,6 +118,8 @@ class NarrationPipeline:
             else:
                 ctx = self.context_builder.build()
 
+        self._record_minute_sample(ctx, now)
+
         # 2. Detección: umbrales + señales de riesgo (OOM, servicios, estado D...)
         new_events = self.detector.detect(ctx, now)
         if self.risk_engine is not None:
@@ -132,9 +144,12 @@ class NarrationPipeline:
                     score_res = self.scoring.score_event(ev, now)
 
                 ev.score_result = score_res  # type: ignore[misc]
-                # Eventos con score numérico muy bajo (< 10.0) se omiten por umbral
+                # Eventos con score numérico muy bajo (< 10.0) se omiten por umbral,
+                # igual que los avisos repetidos dentro de NARRATION_REPEAT_COOLDOWN_S
                 score_val = getattr(score_res, "score", None)
-                if isinstance(score_val, (int, float)) and score_val < 10.0:
+                if (
+                    isinstance(score_val, (int, float)) and score_val < 10.0
+                ) or self._recently_spoken(ev, now):
                     ev.decision = EventDecision.THRESHOLD_OMITTED  # type: ignore[misc]
                     if eff_metrics is not None:
                         eff_metrics.record_decision(EventDecision.THRESHOLD_OMITTED)
@@ -178,6 +193,37 @@ class NarrationPipeline:
                 self._dispatch_to_gemini(event_to_speak, ctx, skip_audio=False)
 
         return event_to_speak
+
+    def _record_minute_sample(self, ctx: Any, now: datetime) -> None:
+        """Acumula CPU y memoria del tick; al cambiar de minuto guarda el agregado."""
+        if self.minute_repo is None:
+            return
+        minute = now.replace(second=0, microsecond=0)
+        if self._minute is not None and minute != self._minute:
+            self._flush_minute()
+        self._minute = minute
+        resources = getattr(ctx, "resources", None)
+        for name, attr in (("cpu", "cpu_percent"), ("memory", "memory_percent")):
+            value = getattr(resources, attr, None)
+            if isinstance(value, (int, float)):
+                self._minute_samples[name].append(float(value))
+
+    def _flush_minute(self) -> None:
+        if self.minute_repo is None or self._minute is None:
+            return
+        for name, values in self._minute_samples.items():
+            self.minute_repo.save_minute(
+                self.session_id, self._minute, name, list(values)
+            )
+            values.clear()
+
+    def _recently_spoken(self, event: Event, now: datetime) -> bool:
+        """Indica si un aviso equivalente se narró dentro del cooldown de repetición."""
+        if event.severity == EventSeverity.CRITICAL:
+            return False
+        since = getattr(self.scoring, "seconds_since_spoken", None)
+        elapsed = since(event, now) if callable(since) else None
+        return isinstance(elapsed, (int, float)) and elapsed < self.repeat_cooldown_s
 
     def _dispatch_to_gemini(
         self,
@@ -286,6 +332,7 @@ class NarrationPipeline:
 
     def stop(self) -> None:
         """Detiene limpiamente el worker del pipeline."""
+        self._flush_minute()
         if self.session_repo and self.session_id:
             from datetime import timezone
             self.session_repo.end_session(
