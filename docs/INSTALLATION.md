@@ -142,7 +142,7 @@ Edita el archivo `.env`:
 # Para habilitar Gemini (opcional):
 GEMINI_ENABLED=true
 GEMINI_API_KEY=tu_clave_de_google_ai_studio
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-3.5-flash-lite
 
 # Para utilizar voz neuronal Piper TTS (opcional):
 NARRATION_PIPER_MODEL_PATH=/home/usuario/.local/share/piper/es_ES-davefx-medium.onnx

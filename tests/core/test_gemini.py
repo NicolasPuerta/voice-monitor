@@ -197,7 +197,9 @@ def test_gemini_client_does_not_retry_invalid_key(
 
 
 @patch("app.core.gemini.genai")
-def test_gemini_client_disables_thinking_only_on_flash(mock_genai: MagicMock) -> None:
+def test_gemini_client_disables_thinking_only_on_2_5_flash(
+    mock_genai: MagicMock,
+) -> None:
     def client_for(model: str) -> GeminiClient:
         return GeminiClient(
             Settings(gemini=GeminiSettings(enabled=True, api_key="k", model=model))
@@ -205,11 +207,14 @@ def test_gemini_client_disables_thinking_only_on_flash(mock_genai: MagicMock) ->
 
     flash = client_for("gemini-2.5-flash")
     pro = client_for("gemini-2.5-pro")
+    newer = client_for("gemini-3.5-flash-lite")
     flash_cfg = flash._build_config(None)  # pylint: disable=protected-access
     pro_cfg = pro._build_config(None)  # pylint: disable=protected-access
     assert flash_cfg.thinking_config is not None
     assert flash_cfg.thinking_config.thinking_budget == 0
     assert pro_cfg.thinking_config is None
+    newer_cfg = newer._build_config(None)  # pylint: disable=protected-access
+    assert newer_cfg.thinking_config is None
 
 
 @patch("app.core.gemini.genai")

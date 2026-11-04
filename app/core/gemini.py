@@ -144,11 +144,12 @@ class GeminiClient:
     def _build_config(
         self, system_instruction: str | None
     ) -> types.GenerateContentConfig:
-        """Configura JSON nativo y, en modelos flash, desactiva el razonamiento."""
+        """Configura JSON nativo y, en Gemini 2.5 Flash, desactiva el razonamiento."""
         thinking = None
         # El razonamiento añade segundos de latencia a una narración que debe ser
-        # inmediata; los modelos flash permiten desactivarlo (presupuesto 0).
-        if "flash" in self.model_name:
+        # inmediata. Solo la familia 2.5 Flash acepta thinking_budget=0; varios
+        # modelos posteriores (p. ej. *-flash-lite) lo rechazan con 400.
+        if self.model_name.startswith("gemini-2.5-flash"):
             thinking = types.ThinkingConfig(thinking_budget=0)
         return types.GenerateContentConfig(
             system_instruction=system_instruction,

@@ -19,7 +19,7 @@ def test_default_settings() -> None:
     assert settings.collector.battery_interval_s == 15.0
     assert settings.collector.adaptive is True
     assert settings.gemini.enabled is False
-    assert settings.gemini.model == "gemini-2.5-flash"
+    assert settings.gemini.model == "gemini-3.5-flash-lite"
     assert settings.gemini.api_key is None
     assert settings.narration.verbosity is NarrationVerbosity.NORMAL
     assert settings.narration.min_gap_s == 10.0

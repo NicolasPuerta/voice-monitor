@@ -191,7 +191,7 @@ class GeminiSettings(_GroupSettings):
     enabled: bool = False
     """Habilita el análisis con Gemini."""
 
-    model: str = Field(default="gemini-2.5-flash", min_length=1)
+    model: str = Field(default="gemini-3.5-flash-lite", min_length=1)
     """Nombre del modelo de Gemini."""
 
     api_key: SecretStr | None = None

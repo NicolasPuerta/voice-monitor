@@ -35,7 +35,7 @@ La configuración se evalúa según la siguiente jerarquía estricta (el nivel s
 | **`NARRATION_EVENT_TTL_S`** | `float` ($\ge$ `min_gap_s`) | No | `60.0` | Tiempo de vida de un evento en cola. Se descarta si expira antes de poder hablar. |
 | **`NARRATION_PIPER_MODEL_PATH`** | `string` (ruta a archivo) | No | `None` | Ruta absoluta al modelo `.onnx` de Piper TTS (voz neuronal primordial offline). |
 | **`GEMINI_ENABLED`** | `bool` (`true`/`false`) | No | `false` | Habilita el análisis cognitivo mediante la API en la nube de Google Gemini. |
-| **`GEMINI_MODEL`** | `string` | No | `gemini-2.5-flash` | Modelo de Gemini utilizado para analizar el contexto del sistema. |
+| **`GEMINI_MODEL`** | `string` | No | `gemini-3.5-flash-lite` | Modelo de Gemini utilizado para analizar el contexto del sistema. |
 | **`GEMINI_API_KEY`** | `string` (secreto) | **Sí** (si Gemini habilitado) | `None` | Clave de acceso a la API de Google Gemini (nunca se muestra en logs). |
 | **`GEMINI_TTS_MODEL`** | `string` | No | `gemini-2.5-flash-preview-tts` | Modelo de voz de Gemini, último recurso de narración si fallan Piper y espeak-ng. |
 | **`GEMINI_TTS_VOICE`** | `string` | No | `Kore` | Voz preconstruida del modelo TTS de Gemini. |
@@ -55,7 +55,7 @@ Para habilitar el análisis inteligente con Google Gemini:
    ```bash
    GEMINI_ENABLED=true
    GEMINI_API_KEY=AIzaSy...TuClaveAqui...
-   GEMINI_MODEL=gemini-2.5-flash
+   GEMINI_MODEL=gemini-3.5-flash-lite
    ```
 4. **Seguridad:** El archivo `.env` está expresamente excluido en el `.gitignore`. Nunca realices commits de credenciales o claves privadas al repositorio.
 
