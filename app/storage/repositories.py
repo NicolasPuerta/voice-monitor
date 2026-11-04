@@ -74,6 +74,17 @@ class EventRepository:
                 score, impact, novelty, anomaly, risk, relevance, repetition_penalty,
                 detected_at, app_key, summary, metadata_json
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                decision = excluded.decision,
+                score = excluded.score,
+                impact = excluded.impact,
+                novelty = excluded.novelty,
+                anomaly = excluded.anomaly,
+                risk = excluded.risk,
+                relevance = excluded.relevance,
+                repetition_penalty = excluded.repetition_penalty,
+                summary = excluded.summary,
+                metadata_json = excluded.metadata_json
             """,
             (
                 str(event.id),
