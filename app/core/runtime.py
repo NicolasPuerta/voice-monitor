@@ -3,6 +3,7 @@
 from datetime import datetime, timezone
 import json
 import logging
+import os
 from pathlib import Path
 import time
 from typing import Any
@@ -132,6 +133,14 @@ class RuntimeManager:
             return False
 
         self.send_command("stop")
+        # SIGTERM provoca un cierre ordenado inmediato (el monitor lo atiende
+        # aunque esté esperando el siguiente tick); la orden en control.json
+        # queda como respaldo donde no hay señales.
+        if os.name == "posix":
+            try:
+                psutil.Process(pid).terminate()
+            except psutil.Error:
+                pass
 
         # Esperar que termine pacíficamente
         deadline = time.time() + timeout_s

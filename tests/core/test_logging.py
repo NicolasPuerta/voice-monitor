@@ -2,7 +2,9 @@
 
 import io
 import logging
+import logging.handlers
 import re
+from pathlib import Path
 from collections.abc import Iterator
 
 import pytest
@@ -83,3 +85,17 @@ def test_get_logger_prefixes_name() -> None:
     assert get_logger("monitor").name == "app.monitor"
     assert get_logger("app.core.config").name == "app.core.config"
     assert get_logger("app").name == "app"
+
+
+def test_log_file_handler_writes_and_rotates(tmp_path: Path) -> None:
+    """Con log_file, los mensajes van al archivo con rotación."""
+    log_file = tmp_path / "logs" / "narrator.log"
+    configure_logging("INFO", log_file=log_file)
+    get_logger("app.test").info("hola archivo")
+
+    handler = logging.getLogger(ROOT_LOGGER_NAME).handlers[-1]
+    handler.flush()
+    assert isinstance(handler, logging.handlers.RotatingFileHandler)
+    assert handler.maxBytes > 0 and handler.backupCount > 0
+    assert "hola archivo" in log_file.read_text(encoding="utf-8")
+    handler.close()
