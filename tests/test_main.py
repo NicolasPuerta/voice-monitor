@@ -18,3 +18,15 @@ def test_main_prints_startup_message(capsys: pytest.CaptureFixture[str]) -> None
     captured = capsys.readouterr()
     assert exit_code == 0
     assert get_startup_message() in captured.out
+
+
+def test_main_delegates_to_cli_foreground_start() -> None:
+    """`python -m app` usa el mismo arranque que `narrator start --foreground`."""
+    from unittest.mock import patch
+
+    with patch("app.cli.main", return_value=0) as cli_main:
+        assert main(["--demo", "--iterations", "2"], run_loop=True) == 0
+
+    cli_main.assert_called_once_with(
+        ["start", "--foreground", "--demo", "--iterations", "2"]
+    )
