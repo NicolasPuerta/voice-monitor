@@ -32,7 +32,7 @@ class PiperGenerator(AudioGenerator):
     def _load_voice(self) -> None:
         """Carga el modelo ONNX en RAM una sola vez al inicio."""
         try:
-            from piper import PiperVoice  # type: ignore[import-not-found]
+            from piper import PiperVoice
 
             logger.info(
                 "Cargando modelo residente de Piper en RAM: %s", self.model_path

@@ -733,7 +733,7 @@ class ReportService:
         """Genera el informe en formato PDF utilizando WeasyPrint si está disponible."""
         html_content = self.generate_html(session_id)
         try:
-            import weasyprint  # type: ignore[import-not-found]
+            import weasyprint
 
             weasy_doc = weasyprint.HTML(string=html_content)
             return weasy_doc.write_pdf()  # type: ignore[no-any-return]
