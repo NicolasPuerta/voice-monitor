@@ -282,8 +282,9 @@ def test_cli_service_subcommand(
     out = capsys.readouterr().out
     assert "NO INSTALADO" in out
 
-    # 2. Install
-    code = main(["service", "install", "--unit-path", str(unit_file)])
+    # 2. Install (simula un usuario normal: el CI en contenedor corre como root)
+    with patch("app.cli.os.getuid", return_value=1000):
+        code = main(["service", "install", "--unit-path", str(unit_file)])
     assert code == 0
     out = capsys.readouterr().out
     assert "instalado en" in out
@@ -392,3 +393,15 @@ def test_cli_foreground_sigterm_shuts_down_cleanly(tmp_path: Path) -> None:
     step.assert_called_once()
     assert runtime.get_running_pid() is None
     assert signal.getsignal(signal.SIGTERM) == previous
+
+
+def test_cli_service_install_refuses_root(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """`narrator service install` se niega a ejecutarse como root."""
+    unit_file = tmp_path / "voice-monitor.service"
+    with patch("app.cli.os.getuid", return_value=0):
+        code = main(["service", "install", "--unit-path", str(unit_file)])
+    assert code == 1
+    assert "root" in capsys.readouterr().err
+    assert not unit_file.exists()

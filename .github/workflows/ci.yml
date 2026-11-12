@@ -161,8 +161,8 @@ jobs:
           /tmp/install-test/bin/pip install dist/*.whl
           /tmp/install-test/bin/python -c "
           import app.storage.knowledge_data as kd
-          print(f'Knowledge base entries loaded: {len(kd.LOADED_KNOWLEDGE)}')
-          assert len(kd.LOADED_KNOWLEDGE) >= 200, 'Knowledge base must have >= 200 entries'
+          print(f'Knowledge base entries loaded: {len(kd.SEEDED_PROCESSES)}')
+          assert len(kd.SEEDED_PROCESSES) >= 200, 'Knowledge base must have >= 200 entries'
           "
           /tmp/install-test/bin/narrator --help
           /tmp/install-test/bin/narrator status
