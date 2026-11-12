@@ -156,9 +156,13 @@ jobs:
           python -m build
 
       - name: Verify wheel contains knowledge base data and entrypoint
+        # Probar el wheel instalado, no el código fuente: sin PYTHONPATH=. y
+        # fuera del repo (si no, pip ve el .egg-info de `build` como ya instalado)
         run: |
+          unset PYTHONPATH
           python -m venv /tmp/install-test
-          /tmp/install-test/bin/pip install dist/*.whl
+          /tmp/install-test/bin/pip install "$PWD"/dist/*.whl
+          cd /tmp
           /tmp/install-test/bin/python -c "
           import app.storage.knowledge_data as kd
           print(f'Knowledge base entries loaded: {len(kd.SEEDED_PROCESSES)}')
