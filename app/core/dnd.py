@@ -1,6 +1,7 @@
 """Administrador de No Molestar (DND) y detección pasiva de actividad."""
 
 import logging
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
@@ -13,6 +14,10 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_PROC_ASOUND = Path("/proc/asound")
 DEFAULT_SYS_VIDEO = Path("/sys/class/video4linux")
+# PipeWire/WirePlumber mantiene el PCM en RUNNING ~5 s tras el último sonido
+# (session.suspend-timeout-seconds; medido 5.1 s en Ubuntu 24.04). Con 6 s un
+# aviso detectado justo tras una narración caía en el borde y se silenciaba.
+DEFAULT_SELF_PLAYBACK_GRACE_S = 8.0
 
 
 class DNDManager:
@@ -29,6 +34,8 @@ class DNDManager:
         proc_asound_path: Path = DEFAULT_PROC_ASOUND,
         sys_video_path: Path = DEFAULT_SYS_VIDEO,
         dbus_probe: Callable[[], bool] | None = None,
+        self_playback_grace_s: float = DEFAULT_SELF_PLAYBACK_GRACE_S,
+        clock: Callable[[], float] = time.monotonic,
     ) -> None:
         self.health_manager = health_manager or SourceHealthManager()
         self._manual_dnd = manual_dnd
@@ -36,9 +43,35 @@ class DNDManager:
         self.proc_asound_path = proc_asound_path
         self.sys_video_path = sys_video_path
         self._custom_dbus_probe = dbus_probe
+        self.self_playback_grace_s = self_playback_grace_s
+        self._clock = clock
 
         self._paused = manual_dnd
         self._pause_reason = "config" if manual_dnd else ""
+
+        # Reproducción propia del monitor (la narración), para no confundirla
+        # con multimedia del usuario: el PCM de ALSA pertenece a PipeWire y no
+        # permite distinguir qué proceso está sonando.
+        self._own_playbacks = 0
+        self._own_playback_ended_at: float | None = None
+
+    def own_playback_started(self) -> None:
+        """Notifica que el monitor comenzó a reproducir su propia narración."""
+        self._own_playbacks += 1
+
+    def own_playback_finished(self) -> None:
+        """Notifica que terminó la reproducción de la narración propia."""
+        self._own_playbacks = max(0, self._own_playbacks - 1)
+        self._own_playback_ended_at = self._clock()
+
+    def is_own_playback_active(self) -> bool:
+        """Indica si el audio de ALSA puede deberse a la propia narración."""
+        if self._own_playbacks > 0:
+            return True
+        if self._own_playback_ended_at is None:
+            return False
+        elapsed = self._clock() - self._own_playback_ended_at
+        return elapsed < self.self_playback_grace_s
 
     def pause(self, reason: str = "manual") -> None:
         """Pausa manualmente las narraciones de audio."""
@@ -108,7 +141,13 @@ class DNDManager:
         return False
 
     def is_media_playing(self) -> bool:
-        """Detecta si hay reproducción multimedia activa en ALSA (pcm*p/sub*/status)."""
+        """Detecta si hay reproducción multimedia activa en ALSA (pcm*p/sub*/status).
+
+        Mientras suena la narración propia (y su ventana de gracia) no se puede
+        atribuir el PCM activo al usuario, así que no se considera multimedia.
+        """
+        if self.is_own_playback_active():
+            return False
         if not self.proc_asound_path.exists():
             return False
 

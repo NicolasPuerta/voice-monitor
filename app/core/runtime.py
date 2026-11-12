@@ -3,6 +3,7 @@
 from datetime import datetime, timezone
 import json
 import logging
+import os
 from pathlib import Path
 import time
 from typing import Any
@@ -118,6 +119,13 @@ class RuntimeManager:
                     pass
             return None
 
+    def clear_commands(self) -> None:
+        """Descarta cualquier comando de control pendiente (p. ej. un stop obsoleto)."""
+        try:
+            self.control_file.unlink(missing_ok=True)
+        except OSError as exc:
+            logger.debug("Error eliminando archivo de control: %s", exc)
+
     def stop_daemon(self, timeout_s: float = 3.0) -> bool:
         """Detiene el demonio en ejecución enviándole la orden de detención."""
         pid = self.get_running_pid()
@@ -125,6 +133,14 @@ class RuntimeManager:
             return False
 
         self.send_command("stop")
+        # SIGTERM provoca un cierre ordenado inmediato (el monitor lo atiende
+        # aunque esté esperando el siguiente tick); la orden en control.json
+        # queda como respaldo donde no hay señales.
+        if os.name == "posix":
+            try:
+                psutil.Process(pid).terminate()
+            except psutil.Error:
+                pass
 
         # Esperar que termine pacíficamente
         deadline = time.time() + timeout_s
@@ -145,5 +161,7 @@ class RuntimeManager:
             except Exception:
                 pass
 
+        # El proceso murió sin consumir el "stop": no debe afectar al siguiente start
+        self.clear_commands()
         self.remove_pid()
         return True

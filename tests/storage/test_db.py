@@ -175,3 +175,18 @@ def test_background_database_error_recovery(tmp_path: Path) -> None:
     assert len(rows) == 1
 
     db.stop()
+
+
+def test_event_repository_resave_updates_decision(test_db: BackgroundDatabase) -> None:
+    """Guardar dos veces el mismo evento (DND y luego análisis) no falla."""
+    repo = EventRepository(test_db)
+    ev = Event(event_type=EventType.CPU_SPIKE, severity=EventSeverity.HIGH, summary="X")
+    ev.decision = EventDecision.DND  # type: ignore[misc]
+    repo.save_event("sess-1", ev)
+    ev.decision = EventDecision.SPOKEN  # type: ignore[misc]
+    repo.save_event("sess-1", ev)
+    time.sleep(0.3)
+
+    rows = test_db.fetch_sync("SELECT * FROM events WHERE id = ?", (str(ev.id),))
+    assert len(rows) == 1
+    assert rows[0]["decision"] == "spoken"

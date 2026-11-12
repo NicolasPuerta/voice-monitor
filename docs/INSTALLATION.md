@@ -80,7 +80,8 @@ source .venv/bin/activate
 pip install --upgrade pip
 
 # 6. Instalar dependencias del proyecto, desarrollo y reportes
-pip install -e ".[dev,reports]"
+#    (journald requiere: sudo apt install libsystemd-dev pkg-config)
+pip install -e ".[dev,reports,journald]"
 
 # 7. Validar que los comandos estén disponibles en el venv
 narrator --help
@@ -141,7 +142,7 @@ Edita el archivo `.env`:
 # Para habilitar Gemini (opcional):
 GEMINI_ENABLED=true
 GEMINI_API_KEY=tu_clave_de_google_ai_studio
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-3.5-flash-lite
 
 # Para utilizar voz neuronal Piper TTS (opcional):
 NARRATION_PIPER_MODEL_PATH=/home/usuario/.local/share/piper/es_ES-davefx-medium.onnx

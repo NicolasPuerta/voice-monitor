@@ -150,8 +150,11 @@ class SourceHealthManager:
         last_log = self._last_logged_time.get(source, 0.0)
         last_state = self._last_logged_state.get(source)
 
-        # Loguear si hubo un cambio de estado o si ha pasado el intervalo de quietud
-        state_changed = old_state != new_state or last_state != new_state
+        # Loguear si hubo un cambio de estado o si ha pasado el intervalo de quietud.
+        # Una fuente nueva parte de OK: confirmarlo no es un cambio que anunciar.
+        state_changed = old_state != new_state or (
+            last_state is not None and last_state != new_state
+        )
         time_elapsed = (current_time - last_log) >= self.log_quiet_interval_s
 
         if state_changed or (time_elapsed and new_state != SourceState.OK):

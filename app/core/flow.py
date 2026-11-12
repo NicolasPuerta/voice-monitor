@@ -3,9 +3,17 @@
 import heapq
 from datetime import datetime
 
+from app.core.config import NarrationSettings
 from app.domain.enums import EventDecision, EventPriority, EventSeverity
 from app.domain.events import Event
 from app.core.scoring import ScoringEngine
+
+
+def event_group_key(event: Event) -> str:
+    """Clave que identifica eventos equivalentes: tipo de evento + aplicación."""
+    app_key = event.metadata.app_key or "system"
+    return f"{event.event_type.value}:{app_key}"
+
 
 SEVERITY_WEIGHT = {
     EventSeverity.INFO: 1,
@@ -28,9 +36,7 @@ class EventGrouper:
         if self._window_start is None:
             self._window_start = now
 
-        # Clave de agrupación: tipo de evento + llave de aplicación
-        app_key = event.metadata.app_key or "system"
-        key = f"{event.event_type.value}:{app_key}"
+        key = event_group_key(event)
 
         # Deduplicación: conservar el evento de mayor severidad
         if key in self._buffer:
@@ -71,6 +77,19 @@ class PriorityQueue:
         if not event.score_result:
             return
 
+        # Un evento equivalente ya en espera queda obsoleto (vence): se reemplaza
+        # por el nuevo para no acumular copias de la misma situación.
+        key = event_group_key(event)
+        remaining = []
+        for item in self._queue:
+            if event_group_key(item[2]) == key:
+                item[2].decision = EventDecision.EXPIRED  # type: ignore[misc]
+            else:
+                remaining.append(item)
+        if len(remaining) != len(self._queue):
+            heapq.heapify(remaining)
+            self._queue = remaining
+
         # heapq es min-heap, usamos score negativo para que salga el mayor
         score = event.score_result.score
         self._counter += 1
@@ -106,19 +125,43 @@ class PriorityQueue:
 class FlowController:
     """Controla cundo se puede reproducir un evento basndose en token bucket."""
 
-    def __init__(self, scoring_engine: ScoringEngine) -> None:
+    def __init__(
+        self,
+        scoring_engine: ScoringEngine,
+        burst_limit: int = 3,
+        regen_interval_s: float = 8.0,
+        cooldown_s: float = 2.0,
+    ) -> None:
         self.scoring_engine = scoring_engine
 
-        self.burst_limit = 3
-        self.regen_interval_s = 8.0
-        # Presupuesto inicial (ej. ~10 segundos de habla representados en 3 tokens)
-        self.tokens = 3.0
+        self.burst_limit = burst_limit
+        self.regen_interval_s = regen_interval_s
+        # Presupuesto inicial: el bucket arranca lleno
+        self.tokens = float(burst_limit)
 
         self.last_regen_time: datetime | None = None
         self.last_spoken_time: datetime | None = None
 
         # Cooldown global (mnimo tiempo entre cualquier interaccin)
-        self.cooldown_s = 2.0
+        self.cooldown_s = cooldown_s
+
+    @classmethod
+    def from_settings(
+        cls, scoring_engine: ScoringEngine, narration: NarrationSettings
+    ) -> "FlowController":
+        """Crea el controlador a partir de ``NARRATION_MIN_GAP_S`` y ``MAX_BURST``.
+
+        ``min_gap_s`` es el silencio mínimo entre narraciones y ``max_burst`` el
+        tamaño del bucket. Un token se recupera cada ``min_gap_s * max_burst``
+        segundos: se permiten ráfagas de ``max_burst`` avisos separados por
+        ``min_gap_s`` y, sostenidamente, uno por ciclo completo.
+        """
+        return cls(
+            scoring_engine,
+            burst_limit=narration.max_burst,
+            regen_interval_s=max(narration.min_gap_s * narration.max_burst, 1.0),
+            cooldown_s=narration.min_gap_s,
+        )
 
     def _regen_tokens(self, now: datetime) -> None:
         if self.last_regen_time is None:

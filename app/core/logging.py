@@ -1,7 +1,9 @@
 """Logging centralizado de la aplicación."""
 
 import logging
+import logging.handlers
 import sys
+from pathlib import Path
 from typing import Final, TextIO
 
 SUPPORTED_LOG_LEVELS: Final[tuple[str, ...]] = (
@@ -23,6 +25,12 @@ DATE_FORMAT: Final[str] = "%Y-%m-%d %H:%M:%S"
 """Formato del timestamp de los logs."""
 
 _HANDLER_NAME: Final[str] = "app-console"
+
+LOG_FILE_MAX_BYTES: Final[int] = 5 * 1024 * 1024
+"""Tamaño máximo del archivo de log antes de rotarlo."""
+
+LOG_FILE_BACKUPS: Final[int] = 3
+"""Copias rotadas que se conservan (narrator.log.1 ... .3)."""
 
 
 def normalize_log_level(level: str) -> str:
@@ -47,7 +55,9 @@ def normalize_log_level(level: str) -> str:
 
 
 def configure_logging(
-    level: str = "INFO", stream: TextIO | None = None
+    level: str = "INFO",
+    stream: TextIO | None = None,
+    log_file: Path | None = None,
 ) -> logging.Logger:
     """Configura el logger raíz de la aplicación.
 
@@ -57,6 +67,8 @@ def configure_logging(
     Args:
         level: Nivel de logging (DEBUG, INFO, WARNING, ERROR o CRITICAL).
         stream: Destino de los logs. Por defecto ``sys.stderr``.
+        log_file: Si se indica, los logs van a este archivo con rotación
+            (en lugar de ``stream``); se usa al correr en segundo plano.
 
     Returns:
         El logger raíz de la aplicación ya configurado.
@@ -71,7 +83,17 @@ def configure_logging(
         logger.removeHandler(existing)
         existing.close()
 
-    handler = logging.StreamHandler(stream if stream is not None else sys.stderr)
+    handler: logging.Handler
+    if log_file is not None:
+        log_file.parent.mkdir(parents=True, exist_ok=True)
+        handler = logging.handlers.RotatingFileHandler(
+            log_file,
+            maxBytes=LOG_FILE_MAX_BYTES,
+            backupCount=LOG_FILE_BACKUPS,
+            encoding="utf-8",
+        )
+    else:
+        handler = logging.StreamHandler(stream if stream is not None else sys.stderr)
     handler.set_name(_HANDLER_NAME)
     handler.setFormatter(logging.Formatter(LOG_FORMAT, DATE_FORMAT))
     logger.addHandler(handler)

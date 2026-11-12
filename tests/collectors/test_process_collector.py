@@ -108,6 +108,7 @@ def make_collector(*processes: FakeProcess, **options: object) -> ProcessCollect
     def factory() -> list[ProcessHandle]:
         return list(processes)
 
+    options.setdefault("cpu_count", 1)
     return ProcessCollector(process_iter=factory, **options)  # type: ignore[arg-type]
 
 
@@ -357,3 +358,9 @@ def test_collectors_do_not_modify_processes() -> None:
     )
     for source_file in (APP_DIR / "collectors").rglob("*.py"):
         assert not forbidden.search(source_file.read_text(encoding="utf-8")), source_file
+
+
+def test_cpu_percent_is_normalized_to_logical_cpus() -> None:
+    """Verifica que el uso por proceso se exprese sobre el total de CPUs."""
+    collector = make_collector(FakeProcess(10, cpu_percent=790.0), cpu_count=8)
+    assert collector.collect()[0].cpu_percent == 98.75

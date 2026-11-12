@@ -1,5 +1,9 @@
 """Pruebas para SourceHealthManager y degradación elegante."""
 
+import logging
+
+import pytest
+
 from app.collectors.health import SourceHealthManager, SourceState
 
 
@@ -65,3 +69,16 @@ def test_independent_sources() -> None:
     assert mgr.get_state("psi") == SourceState.DEGRADED
     assert mgr.get_state("sqlite") == SourceState.OK
     assert mgr.get_state("gemini") == SourceState.OK
+
+
+def test_confirming_ok_state_is_not_logged(caplog: pytest.LogCaptureFixture) -> None:
+    """Una fuente nueva que sigue OK no anuncia un 'cambio' en el log."""
+    manager = SourceHealthManager()
+    with caplog.at_level(logging.INFO, logger="app.collectors.health"):
+        manager.set_state("psi", SourceState.OK)
+        manager.record_failure("sqlite", reason="fallo puntual")
+    assert "cambió a estado" not in caplog.text
+
+    with caplog.at_level(logging.INFO, logger="app.collectors.health"):
+        manager.set_state("psi", SourceState.DEGRADED, "sin datos")
+    assert "Fuente 'psi' cambió a estado degraded" in caplog.text

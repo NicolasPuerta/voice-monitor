@@ -2,6 +2,7 @@
 
 from datetime import datetime, timedelta, timezone
 
+from app.core.config import NarrationSettings
 from app.core.flow import EventGrouper, FlowController, PriorityQueue
 from app.core.scoring import ScoringEngine
 from app.domain.enums import EventDecision, EventPriority, EventSeverity, EventType
@@ -156,3 +157,74 @@ def test_flow_controller_token_bucket_and_preemption() -> None:
     queue.push(ev_crit)
     out_crit = flow.process_queue(queue, t4 + timedelta(seconds=2.0))
     assert out_crit == ev_crit
+
+
+def test_flow_controller_from_settings_uses_narration_limits() -> None:
+    narration = NarrationSettings(min_gap_s=10.0, max_burst=3, event_ttl_s=60.0)
+    flow = FlowController.from_settings(ScoringEngine(), narration)
+
+    assert flow.cooldown_s == 10.0
+    assert flow.burst_limit == 3
+    assert flow.tokens == 3.0
+    assert flow.regen_interval_s == 30.0
+
+
+def test_flow_controller_respects_min_gap_between_narrations() -> None:
+    engine = ScoringEngine()
+    narration = NarrationSettings(min_gap_s=10.0, max_burst=3, event_ttl_s=60.0)
+    flow = FlowController.from_settings(engine, narration)
+    queue = PriorityQueue(ttl_s=60.0)
+
+    for i in range(2):
+        ev = make_test_event(EventSeverity.MEDIUM, 10.0, f"app{i}", f"app{i}")
+        ev.score_result = engine.score_event(ev, NOW)  # type: ignore[misc]
+        queue.push(ev)
+
+    assert flow.process_queue(queue, NOW) is not None
+    # Dentro del silencio mínimo no se narra aunque haya tokens
+    assert flow.process_queue(queue, NOW + timedelta(seconds=9.0)) is None
+    assert flow.process_queue(queue, NOW + timedelta(seconds=10.0)) is not None
+
+
+def test_flow_controller_sustained_rate_after_burst() -> None:
+    """Tras agotar la ráfaga, se narra como máximo uno por ciclo de recarga."""
+    engine = ScoringEngine()
+    narration = NarrationSettings(min_gap_s=10.0, max_burst=3, event_ttl_s=600.0)
+    flow = FlowController.from_settings(engine, narration)
+    queue = PriorityQueue(ttl_s=600.0)
+
+    for i in range(10):
+        ev = make_test_event(EventSeverity.MEDIUM, 10.0, f"app{i}", f"app{i}")
+        ev.score_result = engine.score_event(ev, NOW)  # type: ignore[misc]
+        queue.push(ev)
+
+    spoken = [
+        t for t in range(0, 120, 5)
+        if flow.process_queue(queue, NOW + timedelta(seconds=t)) is not None
+    ]
+
+    # Ráfaga de 3 separada por el silencio mínimo; luego ~1 cada 30 s
+    assert spoken[:3] == [0, 10, 20]
+    assert len(spoken) <= 3 + 120 // 30
+
+
+def test_priority_queue_replaces_equivalent_pending_event() -> None:
+    """Una situación repetida no se acumula: solo queda la más reciente."""
+    queue = PriorityQueue(ttl_s=60.0)
+    engine = ScoringEngine()
+
+    old = make_test_event(EventSeverity.HIGH, 2.0, "python3", "py", metric_value=90.0)
+    old.score_result = engine.score_event(old, NOW)  # type: ignore[misc]
+    other = make_test_event(EventSeverity.LOW, 100.0, "bash", "bash")
+    other.score_result = engine.score_event(other, NOW)  # type: ignore[misc]
+    new = make_test_event(EventSeverity.HIGH, 2.0, "python3", "py", metric_value=95.0)
+    new.score_result = engine.score_event(new, NOW)  # type: ignore[misc]
+
+    queue.push(old)
+    queue.push(other)
+    queue.push(new)
+
+    assert old.decision == EventDecision.EXPIRED
+    assert queue.pop_ready(NOW) is new
+    assert queue.pop_ready(NOW) is other
+    assert queue.pop_ready(NOW) is None

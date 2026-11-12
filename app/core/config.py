@@ -150,6 +150,9 @@ class NarrationSettings(_GroupSettings):
     event_ttl_s: float = Field(default=60.0, gt=0)
     """Segundos de vigencia de un evento antes de descartarse sin narrar."""
 
+    repeat_cooldown_s: float = Field(default=120.0, ge=0)
+    """Segundos sin repetir un aviso del mismo tipo y aplicación (salvo críticos)."""
+
     piper_model_path: str | None = None
     """Ruta opcional al modelo .onnx de Piper TTS."""
 
@@ -191,11 +194,17 @@ class GeminiSettings(_GroupSettings):
     enabled: bool = False
     """Habilita el análisis con Gemini."""
 
-    model: str = Field(default="gemini-2.5-flash", min_length=1)
+    model: str = Field(default="gemini-3.5-flash-lite", min_length=1)
     """Nombre del modelo de Gemini."""
 
     api_key: SecretStr | None = None
     """API key de Gemini; solo se lee del entorno y nunca se muestra en logs."""
+
+    tts_model: str = Field(default="gemini-2.5-flash-preview-tts", min_length=1)
+    """Modelo de voz de Gemini (último recurso de narración tras Piper y espeak-ng)."""
+
+    tts_voice: str = Field(default="Kore", min_length=1)
+    """Voz preconstruida del modelo TTS de Gemini."""
 
     @model_validator(mode="after")
     def _validate_api_key(self) -> "GeminiSettings":
@@ -277,6 +286,22 @@ class Settings(BaseModel):
 
     dnd: DndSettings = Field(default_factory=DndSettings)
     """Configuración de No Molestar."""
+
+    @staticmethod
+    def default_env_files() -> tuple[Path, ...]:
+        """Rutas candidatas de ``.env`` cuando no se indica ``--config``, en orden."""
+        return (
+            Path.cwd() / ".env",
+            Path.home() / ".config" / "ubuntu-voice-monitor" / "config.env",
+        )
+
+    @classmethod
+    def find_default_env_file(cls) -> Path | None:
+        """Retorna el primer ``.env`` predeterminado que exista, o ``None``."""
+        for candidate in cls.default_env_files():
+            if candidate.is_file():
+                return candidate
+        return None
 
     @classmethod
     def load(cls, env_file: Path | None = None) -> "Settings":

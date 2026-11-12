@@ -1,5 +1,6 @@
 """Pruebas del recolector incremental de journald (MR 16)."""
 
+from datetime import datetime
 from typing import Any
 
 from app.collectors.health import SourceHealthManager, SourceState
@@ -200,3 +201,44 @@ def test_journald_handles_permission_error_gracefully() -> None:
     snap2 = collector.collect()
     assert snap2 is None
     assert health.get_state("journald") == SourceState.DEGRADED
+
+
+def test_journald_reader_skips_entry_at_saved_cursor() -> None:
+    """seek_cursor() vuelve a entregar la última entrada leída; no se repite."""
+    logs = [
+        {"MESSAGE": "ya leída", "__CURSOR": "r0"},
+        {"MESSAGE": "nueva", "__CURSOR": "r1"},
+    ]
+    collector = JournaldCollector(reader=MockJournalReader(entries=logs))
+    collector._initialized = True
+    collector._cursor = "r0"
+
+    snap = collector.collect()
+    assert snap is not None
+    assert snap.total_new_entries == 1
+    assert snap.cursor == "r1"
+
+
+def test_journald_service_unit_comes_from_unit_field() -> None:
+    """Los mensajes de PID 1 identifican el servicio afectado por UNIT."""
+    logs = [
+        {
+            "MESSAGE": "web.service: Failed with result 'exit-code'.",
+            "PRIORITY": 4,
+            "UNIT": "web.service",
+            "_SYSTEMD_UNIT": "init.scope",
+            "SYSLOG_IDENTIFIER": "systemd",
+            "__CURSOR": "r1",
+            "__REALTIME_TIMESTAMP": datetime(2026, 1, 1, 12, 0),
+        }
+    ]
+    collector = JournaldCollector(reader=MockJournalReader(entries=logs))
+    collector._initialized = True
+    collector._cursor = "r0"
+
+    snap = collector.collect()
+    assert snap is not None
+    failure = snap.service_failures[0]
+    assert failure.unit == "web.service"
+    assert failure.identifier == "systemd"
+    assert failure.timestamp.tzinfo is not None

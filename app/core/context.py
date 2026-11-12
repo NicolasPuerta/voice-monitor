@@ -1,7 +1,7 @@
 """Construcción del contexto del sistema combinando métricas y agrupando aplicaciones."""
 
 from datetime import datetime, timezone
-from typing import Iterable
+from typing import Any, Iterable
 
 from app.collectors.health import SourceHealthManager
 from app.domain.context import ApplicationGroup, SystemContext
@@ -28,12 +28,35 @@ SHELLS_AND_TERMINALS = {
 
 INTERPRETERS = {"python", "python3", "node", "nodejs", "java", "ruby", "perl"}
 
+# Lanzadores que solo envuelven a otro programa: el consumo es del hijo, no suyo.
+WRAPPERS = {
+    "timeout",
+    "nice",
+    "ionice",
+    "nohup",
+    "env",
+    "setsid",
+    "stdbuf",
+    "time",
+    "sudo",
+    "flock",
+    "chrt",
+    "taskset",
+}
+
 
 class SystemContextBuilder:
     """Combina snapshots dispares en una vista estructurada y agrupa aplicaciones."""
 
-    def __init__(self) -> None:
-        pass
+    def __init__(self, health_manager: SourceHealthManager | None = None) -> None:
+        self._health_manager = health_manager or SourceHealthManager()
+        # Los collectors se reutilizan entre ticks: psutil necesita lecturas
+        # sucesivas sobre los mismos objetos para calcular el uso de CPU.
+        self._resource_collector: Any = None
+        self._psi_collector: Any = None
+        self._process_collector: Any = None
+        self._systemd_collector: Any = None
+        self._journald_collector: Any = None
 
     def build(
         self,
@@ -53,15 +76,21 @@ class SystemContextBuilder:
             collected_at = datetime.now(timezone.utc)
 
         if health_manager is None:
-            health_manager = SourceHealthManager()
+            health_manager = self._health_manager
 
-        if resources is None:
+        live = resources is None
+        if live:
+            # Recolección en vivo: recursos, presión PSI y uptime del host.
             try:
-                from app.collectors.system import SystemResourceCollector
+                from app.collectors.system import PSICollector, SystemResourceCollector
 
-                sys_coll = SystemResourceCollector(health_manager)
-                resources = sys_coll.collect()
-                uptime_s = sys_coll.get_uptime()
+                if self._resource_collector is None:
+                    self._resource_collector = SystemResourceCollector(health_manager)
+                    self._psi_collector = PSICollector(health_manager)
+                resources = self._resource_collector.collect()
+                uptime_s = self._resource_collector.get_uptime()
+                if pressure is None:
+                    pressure = self._psi_collector.collect()
             except Exception:
                 resources = ResourceSnapshot(
                     cpu_percent=0.0,
@@ -76,10 +105,14 @@ class SystemContextBuilder:
             try:
                 from app.collectors.process import ProcessCollector
 
-                proc_coll = ProcessCollector()
-                processes = proc_coll.collect()
+                if self._process_collector is None:
+                    self._process_collector = ProcessCollector()
+                processes = self._process_collector.collect()
             except Exception:
                 processes = []
+
+        if live and systemd is None and journald is None:
+            systemd, journald = self._collect_linux_sources(health_manager)
 
         apps = self._group_processes(processes)
 
@@ -103,6 +136,29 @@ class SystemContextBuilder:
             journald=journald,
             risk_signals=risk_signals,
         )
+
+    def _collect_linux_sources(
+        self, health_manager: SourceHealthManager
+    ) -> tuple[SystemdSnapshot | None, JournaldSnapshot | None]:
+        """Lee systemd y journald; si no están disponibles devuelve None."""
+        from app.collectors.journald import JournaldCollector
+        from app.collectors.systemd import SystemdCollector
+
+        if self._systemd_collector is None:
+            self._systemd_collector = SystemdCollector(health_manager)
+            self._journald_collector = JournaldCollector(health_manager)
+
+        systemd: SystemdSnapshot | None = None
+        journald: JournaldSnapshot | None = None
+        try:
+            systemd = self._systemd_collector.collect()
+        except Exception:  # pylint: disable=broad-exception-caught
+            systemd = None
+        try:
+            journald = self._journald_collector.collect()
+        except Exception:  # pylint: disable=broad-exception-caught
+            journald = None
+        return systemd, journald
 
     def _group_processes(
         self, processes: Iterable[ProcessSnapshot]
@@ -171,8 +227,8 @@ class SystemContextBuilder:
             if not parent:
                 break
 
-            # Separación lógica: shell o terminal
-            if parent.name in SHELLS_AND_TERMINALS:
+            # Separación lógica: shell, terminal o lanzador (timeout, nice...)
+            if parent.name in SHELLS_AND_TERMINALS or parent.name in WRAPPERS:
                 break
 
             # Separación por cgroup explícito (ej. salto de user.slice a app.slice)

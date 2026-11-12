@@ -11,8 +11,10 @@ import logging
 import os
 from pathlib import Path
 import shutil
+import signal
 import subprocess
 import sys
+import threading
 import time
 from typing import Any, Sequence
 
@@ -28,6 +30,7 @@ from app.core.context import SystemContextBuilder
 from app.core.detector import RuleBasedDetector
 from app.core.dnd import DNDManager
 from app.core.flow import EventGrouper, FlowController
+from app.core.risk import RiskEngine
 from app.core.gemini import GeminiClient, GeminiContextBuilder
 from app.core.logging import configure_logging, get_logger
 from app.core.pipeline import NarrationPipeline
@@ -40,6 +43,7 @@ from app.storage.db import BackgroundDatabase
 from app.storage.repositories import (
     EventRepository,
     KnowledgeRepository,
+    MinuteAggRepository,
     SessionRepository,
     SourceHealthRepository,
 )
@@ -110,6 +114,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         default=False,
         help="Modo prueba: simula respuesta de Gemini sin conexión de red.",
+    )
+    start_p.add_argument(
+        "--log-file",
+        type=Path,
+        default=None,
+        help="Escribe los logs en este archivo (con rotación) en lugar de stderr.",
     )
     start_p.add_argument(
         "--no-audio",
@@ -235,10 +245,14 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def load_settings_safely(config_path: str | None) -> Settings:
-    """Carga la configuración permitiendo rutas personalizadas."""
+    """Carga la configuración permitiendo rutas personalizadas.
+
+    Sin ``--config`` se usa el primer archivo existente de
+    ``Settings.default_env_files()`` (``./.env`` o el config.env del usuario).
+    """
     if config_path:
         return Settings.load(env_file=Path(config_path))
-    return Settings.load()
+    return Settings.load(env_file=Settings.find_default_env_file())
 
 
 def cmd_start(args: argparse.Namespace, runtime: RuntimeManager) -> int:
@@ -266,13 +280,18 @@ def cmd_start(args: argparse.Namespace, runtime: RuntimeManager) -> int:
             cmd.append("--test-gemini")
         if args.iterations:
             cmd.extend(["--iterations", str(args.iterations)])
+        log_file = args.log_file or runtime.runtime_dir / "narrator.log"
+        cmd.extend(["--log-file", str(log_file)])
 
-        proc = subprocess.Popen(
-            cmd,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            start_new_session=True if sys.platform != "win32" else False,
-        )
+        # stderr captura lo que ocurra antes de configurar logging (o un crash)
+        crash_file = runtime.runtime_dir / "narrator.stderr.log"
+        with open(crash_file, "wb") as crash_log:
+            proc = subprocess.Popen(
+                cmd,
+                stdout=subprocess.DEVNULL,
+                stderr=crash_log,
+                start_new_session=True if sys.platform != "win32" else False,
+            )
 
         # Esperar hasta 2 segundos para confirmar que registró su PID
         deadline = time.time() + 2.0
@@ -282,13 +301,22 @@ def cmd_start(args: argparse.Namespace, runtime: RuntimeManager) -> int:
                 print(
                     f"Ubuntu Voice Monitor iniciado en segundo plano (PID: {active_pid})."
                 )
+                print(f"Log: {log_file}")
                 return 0
             time.sleep(0.1)
 
+        if proc.poll() not in (None, 0):
+            print(
+                f"Ubuntu Voice Monitor no pudo iniciar (código {proc.returncode}). "
+                f"Revise {crash_file}",
+                file=sys.stderr,
+            )
+            return 1
         print(
             f"Ubuntu Voice Monitor lanzado (PID tentativo: {proc.pid}). "
             "Verifique con 'narrator status'."
         )
+        print(f"Log: {log_file}")
         return 0
 
     # Modo foreground (bucle de monitoreo activo)
@@ -297,10 +325,12 @@ def cmd_start(args: argparse.Namespace, runtime: RuntimeManager) -> int:
 
     current_pid = os.getpid()
     runtime.write_pid(current_pid)
+    # Un comando dejado por una ejecución anterior no debe aplicarse a esta
+    runtime.clear_commands()
 
     settings = load_settings_safely(args.config)
     log_level = "DEBUG" if args.debug else (args.verbosity or settings.app.log_level)
-    configure_logging(log_level)
+    configure_logging(log_level, log_file=getattr(args, "log_file", None))
     app_logger = get_logger("app.cli.monitor")
 
     app_logger.info("Iniciando Ubuntu Voice Monitor (PID: %d)...", current_pid)
@@ -344,15 +374,19 @@ def cmd_start(args: argparse.Namespace, runtime: RuntimeManager) -> int:
         primary_generator=piper,
         fallback_generators=fallbacks,
         health_manager=health_manager,
+        playback_observer=dnd_manager,
     )
 
     # 6. Pipeline
-    context_builder = SystemContextBuilder()
+    context_builder = SystemContextBuilder(health_manager)
     cpu_threshold = 0.1 if args.demo else 80.0
-    detector = RuleBasedDetector(cpu_threshold=cpu_threshold)
+    app_cpu_threshold = 0.1 if args.demo else 25.0
+    detector = RuleBasedDetector(
+        cpu_threshold=cpu_threshold, app_cpu_threshold=app_cpu_threshold
+    )
     scoring = ScoringEngine()
     grouper = EventGrouper(window_s=3.0)
-    flow = FlowController(scoring)
+    flow = FlowController.from_settings(scoring, settings.narration)
 
     pipeline = NarrationPipeline(
         settings=settings,
@@ -371,6 +405,8 @@ def cmd_start(args: argparse.Namespace, runtime: RuntimeManager) -> int:
         health_manager=health_manager,
         session_id=session_id,
         session_repo=session_repo,
+        risk_engine=RiskEngine(),
+        minute_repo=MinuteAggRepository(db),
     )
 
     app_logger.info("Monitor iniciado con éxito. Sesión: %s", session_id)
@@ -378,8 +414,19 @@ def cmd_start(args: argparse.Namespace, runtime: RuntimeManager) -> int:
     step_interval = 1.0 if args.demo else settings.collector.interval_s
     count = 0
 
+    # SIGTERM (narrator stop, systemctl stop) debe cerrar igual que Ctrl+C:
+    # terminar la sesión y vaciar la cola de SQLite antes de salir.
+    stop_requested = threading.Event()
+    previous_sigterm = None
+    if threading.current_thread() is threading.main_thread():
+        previous_sigterm = signal.signal(
+            signal.SIGTERM, lambda _signum, _frame: stop_requested.set()
+        )
+
     try:
-        while args.iterations is None or count < args.iterations:
+        while not stop_requested.is_set() and (
+            args.iterations is None or count < args.iterations
+        ):
             # Revisar comandos de control pendientes (pause, resume, stop)
             ctrl = runtime.consume_command()
             if ctrl:
@@ -434,11 +481,16 @@ def cmd_start(args: argparse.Namespace, runtime: RuntimeManager) -> int:
             )
 
             count += 1
-            time.sleep(step_interval)
+            # Espera interrumpible: una señal de parada no aguarda al próximo tick
+            stop_requested.wait(step_interval)
 
+        if stop_requested.is_set():
+            app_logger.info("Señal de terminación recibida. Finalizando...")
     except KeyboardInterrupt:
         app_logger.info("Interrupción por teclado (Ctrl+C). Finalizando...")
     finally:
+        if previous_sigterm is not None:
+            signal.signal(signal.SIGTERM, previous_sigterm)
         pipeline.stop()
         audio_manager.shutdown()
         db.stop()
@@ -462,7 +514,7 @@ def cmd_stop(runtime: RuntimeManager) -> int:
         return 0
 
     print(f"Deteniendo Ubuntu Voice Monitor (PID: {pid})...")
-    stopped = runtime.stop_daemon(timeout_s=3.0)
+    stopped = runtime.stop_daemon(timeout_s=10.0)
     if stopped:
         print("Ubuntu Voice Monitor se detuvo correctamente.")
         return 0

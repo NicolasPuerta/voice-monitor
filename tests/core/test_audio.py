@@ -117,3 +117,48 @@ def test_system_audio_player_execution(
 
         assert mock_popen.called
         assert mock_remove.called
+
+
+class FailingPlayer(DummyPlayer):
+    def play(self, audio: AudioData) -> None:
+        raise RuntimeError("sin dispositivo")
+
+
+def test_audio_queue_manager_notifies_playback_observer() -> None:
+    observer = MagicMock()
+    manager = AudioQueueManager(
+        DummyPlayer(), primary_generator=DummyGenerator("dummy"),
+        playback_observer=observer,
+    )
+
+    manager._process_text("Hola")
+
+    observer.own_playback_started.assert_called_once()
+    observer.own_playback_finished.assert_called_once()
+    manager.shutdown()
+
+
+def test_audio_queue_manager_notifies_finish_even_on_error() -> None:
+    observer = MagicMock()
+    manager = AudioQueueManager(
+        FailingPlayer(), primary_generator=DummyGenerator("dummy"),
+        playback_observer=observer,
+    )
+
+    manager._process_text("Hola")
+
+    observer.own_playback_finished.assert_called_once()
+    manager.shutdown()
+
+
+def test_audio_queue_manager_skips_observer_without_audio() -> None:
+    observer = MagicMock()
+    manager = AudioQueueManager(
+        DummyPlayer(), primary_generator=DummyGenerator("dummy", should_fail=True),
+        playback_observer=observer,
+    )
+
+    manager._process_text("Hola")
+
+    observer.own_playback_started.assert_not_called()
+    manager.shutdown()

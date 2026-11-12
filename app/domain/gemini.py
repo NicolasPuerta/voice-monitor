@@ -24,6 +24,12 @@ class GeminiContext(DomainModel):
 
     system_load_avg: tuple[float, float, float]
     memory_percent: float
+    cpu_percent: float | None = None
+    cpu_count_logical: int | None = None
+    # PSI "some" avg10 (% del tiempo con tareas esperando el recurso)
+    cpu_pressure_avg10: float | None = None
+    memory_pressure_avg10: float | None = None
+    io_pressure_avg10: float | None = None
     battery_percent: float | None = None
     battery_plugged: bool | None = None
 

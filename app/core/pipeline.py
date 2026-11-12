@@ -15,10 +15,12 @@ from app.core.detector import RuleBasedDetector
 from app.core.dnd import DNDManager
 from app.core.flow import EventGrouper, FlowController, PriorityQueue
 from app.core.gemini import GeminiContextBuilder
+from app.core.risk import RiskEngine
 from app.core.scoring import ScoringEngine
-from app.domain.enums import EventDecision
+from app.domain.enums import EventDecision, EventSeverity
+from app.domain.context import SystemContext
 from app.domain.events import Event
-from app.storage import EventRepository, KnowledgeRepository
+from app.storage import EventRepository, KnowledgeRepository, MinuteAggRepository
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +47,8 @@ class NarrationPipeline:
         metrics: Any | None = None,
         session_id: str | None = None,
         session_repo: Any | None = None,
+        risk_engine: RiskEngine | None = None,
+        minute_repo: MinuteAggRepository | None = None,
     ):
         self.settings = settings
         self.context_builder = context_builder
@@ -57,6 +61,7 @@ class NarrationPipeline:
         self.audio = audio_manager
         self.event_repo = event_repo
         self.knowledge_repo = knowledge_repo
+        self.risk_engine = risk_engine
         self.test_mode_gemini = test_mode_gemini
 
         self.dnd_manager = dnd_manager
@@ -64,6 +69,10 @@ class NarrationPipeline:
         self.metrics = metrics
         self.session_id = session_id or "current_session"
         self.session_repo = session_repo
+        # Muestras de CPU/memoria del minuto en curso (para los picos del informe)
+        self.minute_repo = minute_repo
+        self._minute: datetime | None = None
+        self._minute_samples: dict[str, list[float]] = {"cpu": [], "memory": []}
 
         if self.session_repo and self.session_id:
             from datetime import timezone
@@ -71,11 +80,20 @@ class NarrationPipeline:
                 self.session_id, datetime.now(timezone.utc)
             )
 
-        self.priority_queue = PriorityQueue(ttl_s=30.0)
+        # NARRATION_EVENT_TTL_S; las pruebas pueden inyectar settings simulados
+        narration = getattr(settings, "narration", None)
+        ttl_s = getattr(narration, "event_ttl_s", None)
+        cooldown_s = getattr(narration, "repeat_cooldown_s", None)
+        self.repeat_cooldown_s = (
+            float(cooldown_s) if isinstance(cooldown_s, (int, float)) else 120.0
+        )
+        self.priority_queue = PriorityQueue(
+            ttl_s=float(ttl_s) if isinstance(ttl_s, (int, float)) else 30.0
+        )
 
-        # Worker de Gemini: (event, knowledge, load_avg, mem_pct, skip_audio)
+        # Worker de Gemini: (event, knowledge, contexto del tick, skip_audio)
         self._gemini_queue: queue.Queue[
-            tuple[Event, str | None, tuple[float, float, float], float, bool] | None
+            tuple[Event, str | None, SystemContext, bool] | None
         ] = queue.Queue()
         self._stop_event = threading.Event()
         self._gemini_thread = threading.Thread(target=self._gemini_worker, daemon=True)
@@ -100,8 +118,15 @@ class NarrationPipeline:
             else:
                 ctx = self.context_builder.build()
 
-        # 2. Detección
+        self._record_minute_sample(ctx, now)
+
+        # 2. Detección: umbrales + señales de riesgo (OOM, servicios, estado D...)
         new_events = self.detector.detect(ctx, now)
+        if self.risk_engine is not None:
+            signals = self.risk_engine.evaluate(ctx, ctx.systemd, ctx.journald, now)
+            if signals:
+                ctx = ctx.model_copy(update={"risk_signals": tuple(signals)})
+                new_events.extend(RiskEngine.signals_to_events(signals))
         if eff_metrics is not None:
             eff_metrics.increment_counter("events_detected", len(new_events))
         for ev in new_events:
@@ -119,9 +144,12 @@ class NarrationPipeline:
                     score_res = self.scoring.score_event(ev, now)
 
                 ev.score_result = score_res  # type: ignore[misc]
-                # Eventos con score numérico muy bajo (< 10.0) se omiten por umbral
+                # Eventos con score numérico muy bajo (< 10.0) se omiten por umbral,
+                # igual que los avisos repetidos dentro de NARRATION_REPEAT_COOLDOWN_S
                 score_val = getattr(score_res, "score", None)
-                if isinstance(score_val, (int, float)) and score_val < 10.0:
+                if (
+                    isinstance(score_val, (int, float)) and score_val < 10.0
+                ) or self._recently_spoken(ev, now):
                     ev.decision = EventDecision.THRESHOLD_OMITTED  # type: ignore[misc]
                     if eff_metrics is not None:
                         eff_metrics.record_decision(EventDecision.THRESHOLD_OMITTED)
@@ -158,29 +186,49 @@ class NarrationPipeline:
 
                 # Si es modo texto, se analiza con Gemini pero no se encola audio
                 if self.dnd_manager and self.dnd_manager.text_only:
-                    self._dispatch_to_gemini(
-                        event_to_speak,
-                        ctx.resources.load_average,
-                        ctx.resources.memory_percent,
-                        skip_audio=True,
-                    )
+                    self._dispatch_to_gemini(event_to_speak, ctx, skip_audio=True)
             else:
                 if eff_metrics is not None:
                     eff_metrics.record_decision(EventDecision.SPOKEN)
-                self._dispatch_to_gemini(
-                    event_to_speak,
-                    ctx.resources.load_average,
-                    ctx.resources.memory_percent,
-                    skip_audio=False,
-                )
+                self._dispatch_to_gemini(event_to_speak, ctx, skip_audio=False)
 
         return event_to_speak
+
+    def _record_minute_sample(self, ctx: Any, now: datetime) -> None:
+        """Acumula CPU y memoria del tick; al cambiar de minuto guarda el agregado."""
+        if self.minute_repo is None:
+            return
+        minute = now.replace(second=0, microsecond=0)
+        if self._minute is not None and minute != self._minute:
+            self._flush_minute()
+        self._minute = minute
+        resources = getattr(ctx, "resources", None)
+        for name, attr in (("cpu", "cpu_percent"), ("memory", "memory_percent")):
+            value = getattr(resources, attr, None)
+            if isinstance(value, (int, float)):
+                self._minute_samples[name].append(float(value))
+
+    def _flush_minute(self) -> None:
+        if self.minute_repo is None or self._minute is None:
+            return
+        for name, values in self._minute_samples.items():
+            self.minute_repo.save_minute(
+                self.session_id, self._minute, name, list(values)
+            )
+            values.clear()
+
+    def _recently_spoken(self, event: Event, now: datetime) -> bool:
+        """Indica si un aviso equivalente se narró dentro del cooldown de repetición."""
+        if event.severity == EventSeverity.CRITICAL:
+            return False
+        since = getattr(self.scoring, "seconds_since_spoken", None)
+        elapsed = since(event, now) if callable(since) else None
+        return isinstance(elapsed, (int, float)) and elapsed < self.repeat_cooldown_s
 
     def _dispatch_to_gemini(
         self,
         event: Event,
-        load_avg: tuple[float, float, float] | None,
-        mem_pct: float | None,
+        ctx: SystemContext,
         skip_audio: bool = False,
     ) -> None:
         """Envía el evento al worker asíncrono guardándolo primero en BD."""
@@ -192,11 +240,10 @@ class NarrationPipeline:
             k = self.knowledge_repo.get_knowledge(
                 event.metadata.app_key, event.metadata.app_name or ""
             )
-            knowledge = k.short_text
+            # "Aplicación desconocida" no aporta nada a la narración
+            knowledge = k.short_text if k.source != "unknown" else None
 
-        self._gemini_queue.put(
-            (event, knowledge, load_avg or (0, 0, 0), mem_pct or 0.0, skip_audio)
-        )
+        self._gemini_queue.put((event, knowledge, ctx, skip_audio))
 
     def _gemini_worker(self) -> None:
         """Hilo dedicado a comunicarse con Gemini protegiendo los collectors."""
@@ -206,13 +253,7 @@ class NarrationPipeline:
                 if item is None:
                     break
 
-                event, knowledge, load_avg, mem_pct, skip_audio = item
-
-                # Degradación elegante: revisar circuit breaker de Gemini
-                if self.health_manager and not self.health_manager.can_attempt("gemini"):
-                    logger.debug("Omitiendo Gemini por backoff/circuit breaker.")
-                    self._gemini_queue.task_done()
-                    continue
+                event, knowledge, ctx, skip_audio = item
 
                 if self.test_mode_gemini:
                     speech = f"Modo prueba: evento {event.summary}."
@@ -222,29 +263,31 @@ class NarrationPipeline:
                     self._gemini_queue.task_done()
                     continue
 
-                from app.domain.context import SystemContext
-                from app.domain.snapshots import ResourceSnapshot
+                # Sin Gemini configurado: narración local sin marcar fallo
+                if not self._gemini_available():
+                    self._speak_local(event, knowledge, skip_audio)
+                    self._gemini_queue.task_done()
+                    continue
 
-                dummy_ctx = SystemContext(
-                    collected_at=event.detected_at,
-                    resources=ResourceSnapshot(
-                        cpu_percent=0.0,
-                        cpu_count_logical=1,
-                        load_average=load_avg,
-                        memory_total_bytes=1000,
-                        memory_used_bytes=500,
-                        memory_available_bytes=500,
-                        memory_percent=mem_pct or 0.0,
-                    ),
-                )
+                # Degradación elegante: revisar circuit breaker de Gemini
+                if self.health_manager and not self.health_manager.can_attempt("gemini"):
+                    logger.debug("Omitiendo Gemini por backoff/circuit breaker.")
+                    self._speak_local(event, knowledge, skip_audio)
+                    self._gemini_queue.task_done()
+                    continue
 
-                gemini_ctx = self.gemini_builder.build(event, dummy_ctx, knowledge)
+                gemini_ctx = self.gemini_builder.build(event, ctx, knowledge)
 
-                if self.metrics:
-                    with self.metrics.measure_gemini():
+                failure_reason = "Respuesta de análisis nula"
+                try:
+                    if self.metrics:
+                        with self.metrics.measure_gemini():
+                            result = self.analysis_agent.analyze(gemini_ctx)
+                    else:
                         result = self.analysis_agent.analyze(gemini_ctx)
-                else:
-                    result = self.analysis_agent.analyze(gemini_ctx)
+                except Exception as exc:  # pylint: disable=broad-exception-caught
+                    result = None
+                    failure_reason = str(exc)
 
                 if result:
                     if self.health_manager:
@@ -255,11 +298,12 @@ class NarrationPipeline:
                 else:
                     if self.health_manager:
                         self.health_manager.record_failure(
-                            "gemini", reason="Respuesta de análisis nula"
+                            "gemini", reason=failure_reason
                         )
                     logger.warning(
-                        "[GEMINI FALLO] Retornó None. Monitoreo prosigue normalmente."
+                        "[GEMINI FALLO] %s. Se usa narración local.", failure_reason
                     )
+                    self._speak_local(event, knowledge, skip_audio)
 
                 self._gemini_queue.task_done()
 
@@ -270,8 +314,25 @@ class NarrationPipeline:
                     self.health_manager.record_failure("gemini", reason=str(e))
                 logger.error("Error en worker de Gemini: %s", e)
 
+    def _gemini_available(self) -> bool:
+        """Indica si Gemini está habilitado y tiene API key configurada."""
+        gemini = self.settings.gemini
+        return bool(gemini.enabled and gemini.api_key)
+
+    def _speak_local(
+        self, event: Event, knowledge: str | None, skip_audio: bool
+    ) -> None:
+        """Narra el evento con un texto local cuando Gemini no está disponible."""
+        speech = event.summary.rstrip(".") + "."
+        if knowledge:
+            speech = f"{speech} {knowledge.rstrip('.')}."
+        logger.info("[NARRACIÓN LOCAL] %s", speech)
+        if not skip_audio and self.audio:
+            self.audio.enqueue(speech)
+
     def stop(self) -> None:
         """Detiene limpiamente el worker del pipeline."""
+        self._flush_minute()
         if self.session_repo and self.session_id:
             from datetime import timezone
             self.session_repo.end_session(

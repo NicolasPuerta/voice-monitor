@@ -74,6 +74,17 @@ class EventRepository:
                 score, impact, novelty, anomaly, risk, relevance, repetition_penalty,
                 detected_at, app_key, summary, metadata_json
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                decision = excluded.decision,
+                score = excluded.score,
+                impact = excluded.impact,
+                novelty = excluded.novelty,
+                anomaly = excluded.anomaly,
+                risk = excluded.risk,
+                relevance = excluded.relevance,
+                repetition_penalty = excluded.repetition_penalty,
+                summary = excluded.summary,
+                metadata_json = excluded.metadata_json
             """,
             (
                 str(event.id),
@@ -151,7 +162,7 @@ class KnowledgeRepository:
         # 3. Fallback genrico
         return ProcessKnowledge(
             key=app_key,
-            short_text=f"Aplicacin desconocida: {name}.",
+            short_text=f"Aplicación desconocida: {name}.",
             long_text="Proceso detectado sin firma en la base de conocimientos.",
             category="unknown",
             source="unknown",
@@ -190,4 +201,39 @@ class SourceHealthRepository:
             "SELECT * FROM source_health WHERE session_id = ? "
             "ORDER BY updated_at ASC",
             (session_id,),
+        )
+
+
+class MinuteAggRepository:
+    """Guarda agregados por minuto (min/max/promedio) de métricas de la sesión."""
+
+    def __init__(self, db: BackgroundDatabase) -> None:
+        self.db = db
+
+    def save_minute(
+        self,
+        session_id: str,
+        minute: datetime,
+        metric_name: str,
+        values: list[float],
+    ) -> None:
+        if not values:
+            return
+        self.db.execute_async(
+            """
+            INSERT INTO minute_agg (
+                id, session_id, minute_timestamp, metric_name,
+                min_val, max_val, avg_val, count
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                str(uuid.uuid4()),
+                session_id,
+                minute.isoformat(),
+                metric_name,
+                min(values),
+                max(values),
+                sum(values) / len(values),
+                len(values),
+            ),
         )

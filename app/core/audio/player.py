@@ -30,7 +30,7 @@ class SystemAudioPlayer(AudioPlayer):
             cmd = self._get_play_command(path, audio.format)
             if not cmd:
                 logger.error(
-                    "No se encontr un comando de reproduccin vlido en este sistema."
+                    "No se encontró un comando de reproducción válido en este sistema."
                 )
                 return
 

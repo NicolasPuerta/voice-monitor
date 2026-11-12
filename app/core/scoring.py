@@ -49,6 +49,13 @@ class ScoringEngine:
         key = self._get_history_key(event)
         self._history.setdefault(key, []).append(now)
 
+    def seconds_since_spoken(self, event: Event, now: datetime) -> float | None:
+        """Segundos desde que se narró un evento equivalente, o None si nunca."""
+        history = self._history.get(self._get_history_key(event))
+        if not history:
+            return None
+        return (now - max(history)).total_seconds()
+
     def _get_history_key(self, event: Event) -> str:
         app_key = event.metadata.app_key or "system"
         return f"{event.event_type.value}:{app_key}"
@@ -126,9 +133,9 @@ class ScoringEngine:
         if priority == EventPriority.CRITICAL:
             reasons.append("Prioridad mxima por severidad o score excepcional.")
         if breakdown.repetition_penalty >= 30.0:
-            reasons.append("Fuertemente penalizado por repeticin.")
+            reasons.append("Fuertemente penalizado por repetición.")
         if breakdown.novelty > 10.0:
             reasons.append("El evento es muy reciente (alta novedad).")
         if breakdown.relevance >= 20.0:
-            reasons.append("Afecta a una aplicacin interactiva del usuario.")
+            reasons.append("Afecta a una aplicación interactiva del usuario.")
         return reasons

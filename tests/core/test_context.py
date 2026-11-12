@@ -210,3 +210,47 @@ def test_context_builder_includes_linux_integrations_and_risk_signals() -> None:
     assert ctx.journald.cursor == "c_123"
     assert len(ctx.risk_signals) == 1
     assert ctx.risk_signals[0].category == RiskCategory.OOM
+
+
+def test_context_builder_wrapper_does_not_own_child_cpu() -> None:
+    """Un lanzador como `timeout` no se queda con el consumo de su hijo."""
+    builder = SystemContextBuilder()
+    processes = [
+        ProcessSnapshot(pid=100, name="bash", parent_pid=1, executable="/bin/bash"),
+        ProcessSnapshot(
+            pid=200, name="timeout", parent_pid=100, executable="/usr/bin/timeout"
+        ),
+        ProcessSnapshot(
+            pid=300,
+            name="stress",
+            parent_pid=200,
+            executable="/usr/bin/stress",
+            cpu_percent=95.0,
+        ),
+    ]
+
+    ctx = builder.build(
+        collected_at=NOW, resources=make_dummy_resources(), processes=processes
+    )
+
+    top = ctx.apps[0]
+    assert top.name == "stress"
+    assert top.cpu_percent == 95.0
+    timeout_group = next(a for a in ctx.apps if a.name == "timeout")
+    assert timeout_group.cpu_percent == 0.0
+
+
+def test_context_builder_live_reuses_collectors_and_reads_psi() -> None:
+    """En vivo, los collectors persisten entre ticks y se incluye la presión PSI."""
+    health = SourceHealthManager()
+    builder = SystemContextBuilder(health)
+
+    first = builder.build(processes=[])
+    resource_collector = builder._resource_collector  # pylint: disable=protected-access
+    second = builder.build(processes=[])
+
+    same = builder._resource_collector  # pylint: disable=protected-access
+    assert same is resource_collector
+    assert first.pressure is not None
+    assert second.pressure is not None
+    assert health.get_state("psi") in (SourceState.OK, SourceState.DISABLED)

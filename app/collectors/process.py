@@ -126,6 +126,9 @@ class ProcessCollector(Collector[tuple[ProcessSnapshot, ...]]):
 
     El primer ``collect`` devuelve ``cpu_percent`` igual a 0 (psutil necesita dos
     lecturas para calcular el uso); desde el segundo, el valor es real.
+
+    ``cpu_percent`` se normaliza al total de CPUs lógicas (0-100), igual que la
+    carga global: un proceso que ocupa 2 de 8 núcleos reporta 25 %, no 200 %.
     """
 
     def __init__(
@@ -137,6 +140,7 @@ class ProcessCollector(Collector[tuple[ProcessSnapshot, ...]]):
         redact_home_dir: bool = True,
         process_iter: ProcessIterFactory | None = None,
         proc_root: Path = DEFAULT_PROC_ROOT,
+        cpu_count: int | None = None,
     ) -> None:
         """Crea el collector.
 
@@ -149,6 +153,8 @@ class ProcessCollector(Collector[tuple[ProcessSnapshot, ...]]):
             redact_home_dir: Si es verdadero, oculta el directorio personal.
             process_iter: Fuente de procesos; por defecto ``psutil.process_iter``.
             proc_root: Raíz de procfs (configurable para pruebas).
+            cpu_count: CPUs lógicas para normalizar el uso; por defecto las del
+                sistema.
         """
         self._include_username = include_username
         self._include_cmdline = include_cmdline
@@ -156,6 +162,7 @@ class ProcessCollector(Collector[tuple[ProcessSnapshot, ...]]):
         self._redact_home_dir = redact_home_dir
         self._process_iter: ProcessIterFactory = process_iter or psutil.process_iter
         self._proc_root = proc_root
+        self._cpu_count = max(cpu_count or psutil.cpu_count() or 1, 1)
         self._last_stats = CollectionStats()
 
     @property
@@ -234,7 +241,13 @@ class ProcessCollector(Collector[tuple[ProcessSnapshot, ...]]):
                 parent_pid=_read(process.ppid),
                 username=_read(process.username) if self._include_username else None,
                 status=_read(process.status),
-                cpu_percent=max(_read(process.cpu_percent) or 0.0, 0.0),
+                cpu_percent=round(
+                    min(
+                        max(_read(process.cpu_percent) or 0.0, 0.0) / self._cpu_count,
+                        100.0,
+                    ),
+                    2,
+                ),
                 memory_rss_bytes=memory.rss if memory is not None else None,
                 num_threads=_read(process.num_threads),
                 executable=self._read_executable(process),

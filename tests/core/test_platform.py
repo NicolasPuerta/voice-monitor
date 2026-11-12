@@ -186,6 +186,8 @@ def test_detect_wsl1_missing_systemd_and_audio(tmp_path: Path) -> None:
         etc_root=etc,
         run_root=run,
         uid=1000,
+        dev_root=tmp_path / "dev",
+        mnt_root=tmp_path / "mnt",
     )
 
     with patch.dict("os.environ", {}, clear=True):

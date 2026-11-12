@@ -13,6 +13,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.cli import build_parser, main
+from app.core.pipeline import NarrationPipeline
 from app.core.runtime import RuntimeManager
 from app.storage.db import BackgroundDatabase
 
@@ -247,6 +248,9 @@ def test_cli_start_foreground_executes_and_terminates(
     mock_settings.gemini.enabled = False
     mock_settings.gemini.api_key = ""
     mock_settings.narration.piper_model_path = ""
+    mock_settings.narration.min_gap_s = 10.0
+    mock_settings.narration.max_burst = 3
+    mock_settings.narration.event_ttl_s = 60.0
     mock_settings.app.log_level = "INFO"
     mock_settings.dnd.enabled = False
     mock_settings.collector.interval_s = 0.01
@@ -295,3 +299,96 @@ def test_cli_service_subcommand(
     code = main(["service", "uninstall", "--unit-path", str(unit_file)])
     assert code == 0
     assert not unit_file.exists()
+
+
+def test_cli_start_ignores_stale_stop_command(tmp_path: Path) -> None:
+    """Un `stop` dejado por una ejecución anterior no debe apagar el nuevo monitor."""
+    runtime = RuntimeManager(tmp_path / "rt")
+    runtime.send_command("stop")
+
+    mock_settings = MagicMock()
+    mock_settings.storage.db_path = str(tmp_path / "stale.db")
+    mock_settings.gemini.enabled = False
+    mock_settings.gemini.api_key = ""
+    mock_settings.narration.piper_model_path = ""
+    mock_settings.narration.min_gap_s = 10.0
+    mock_settings.narration.max_burst = 3
+    mock_settings.narration.event_ttl_s = 60.0
+    mock_settings.app.log_level = "INFO"
+    mock_settings.dnd.enabled = False
+    mock_settings.collector.interval_s = 0.01
+
+    with patch("app.cli.RuntimeManager", return_value=runtime), \
+         patch("app.cli.load_settings_safely", return_value=mock_settings), \
+         patch.object(NarrationPipeline, "step") as step:
+        code = main([
+            "start", "--foreground", "--iterations", "1", "--no-audio",
+        ])
+
+    assert code == 0
+    step.assert_called_once()
+    assert not runtime.control_file.exists()
+
+
+def test_stop_daemon_clears_unconsumed_command(tmp_path: Path) -> None:
+    """Si el proceso se termina a la fuerza, el comando `stop` no queda pendiente."""
+    runtime = RuntimeManager(tmp_path / "rt")
+    with patch.object(runtime, "get_running_pid", return_value=999999), \
+         patch("app.core.runtime.psutil.pid_exists", return_value=True), \
+         patch("app.core.runtime.psutil.Process"):
+        assert runtime.stop_daemon(timeout_s=0.05) is True
+
+    assert not runtime.control_file.exists()
+
+
+def test_cli_background_start_writes_to_log_file(tmp_path: Path) -> None:
+    """En segundo plano, el hijo recibe --log-file y stderr va a un archivo."""
+    runtime = RuntimeManager(tmp_path / "rt")
+    proc = MagicMock(pid=4321)
+    proc.poll.return_value = None
+
+    with patch("app.cli.RuntimeManager", return_value=runtime), \
+         patch("app.cli.subprocess.Popen", return_value=proc) as popen, \
+         patch("app.cli.time.sleep"), \
+         patch("app.cli.time.time", side_effect=[0.0, 10.0]):
+        code = main(["start"])
+
+    assert code == 0
+    cmd = popen.call_args.args[0]
+    assert cmd[cmd.index("--log-file") + 1] == str(runtime.runtime_dir / "narrator.log")
+    stderr = popen.call_args.kwargs["stderr"]
+    assert stderr.name == str(runtime.runtime_dir / "narrator.stderr.log")
+
+
+def test_cli_foreground_sigterm_shuts_down_cleanly(tmp_path: Path) -> None:
+    """SIGTERM (narrator stop / systemctl stop) termina el bucle sin matar el proceso."""
+    import os
+    import signal
+
+    runtime = RuntimeManager(tmp_path / "rt")
+    mock_settings = MagicMock()
+    mock_settings.storage.db_path = str(tmp_path / "sigterm.db")
+    mock_settings.gemini.enabled = False
+    mock_settings.gemini.api_key = ""
+    mock_settings.narration.piper_model_path = ""
+    mock_settings.narration.min_gap_s = 10.0
+    mock_settings.narration.max_burst = 3
+    mock_settings.narration.event_ttl_s = 60.0
+    mock_settings.app.log_level = "INFO"
+    mock_settings.dnd.enabled = False
+    mock_settings.collector.interval_s = 30.0  # el tick largo no debe retrasar el cierre
+
+    previous = signal.getsignal(signal.SIGTERM)
+    with patch("app.cli.RuntimeManager", return_value=runtime), \
+         patch("app.cli.load_settings_safely", return_value=mock_settings), \
+         patch.object(
+             NarrationPipeline,
+             "step",
+             side_effect=lambda now: os.kill(os.getpid(), signal.SIGTERM),
+         ) as step:
+        code = main(["start", "--foreground", "--no-audio"])
+
+    assert code == 0
+    step.assert_called_once()
+    assert runtime.get_running_pid() is None
+    assert signal.getsignal(signal.SIGTERM) == previous

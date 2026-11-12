@@ -133,3 +133,50 @@ def test_dnd_allows_critical_events_through() -> None:
     )
     # Evento crítico no es suprimido por señales de sensores
     assert mgr.should_suppress_audio(critical_event)[0] is False
+
+
+def _running_playback(tmp_path: Path) -> None:
+    card_pcm = tmp_path / "card0" / "pcm0p" / "sub0"
+    card_pcm.mkdir(parents=True)
+    (card_pcm / "status").write_text("state: RUNNING\nowner_pid: 1234\n")
+
+
+def test_dnd_media_playing_detection(tmp_path: Path) -> None:
+    _running_playback(tmp_path)
+    mgr = DNDManager(proc_asound_path=tmp_path)
+
+    assert mgr.is_media_playing()
+    assert mgr.should_suppress_audio() == (True, "activity:media_playing")
+
+
+def test_dnd_ignores_own_narration_playback(tmp_path: Path) -> None:
+    """La propia voz del monitor no debe activar DND por multimedia."""
+    _running_playback(tmp_path)
+    now = [100.0]
+    mgr = DNDManager(
+        proc_asound_path=tmp_path, self_playback_grace_s=6.0, clock=lambda: now[0]
+    )
+
+    mgr.own_playback_started()
+    assert not mgr.is_media_playing()
+    assert mgr.should_suppress_audio() == (False, "")
+
+    # PipeWire mantiene el PCM en RUNNING unos segundos tras terminar
+    mgr.own_playback_finished()
+    now[0] += 5.0
+    assert not mgr.is_media_playing()
+
+    # Pasada la ventana de gracia, un PCM activo vuelve a ser del usuario
+    now[0] += 1.5
+    assert mgr.is_media_playing()
+    assert mgr.should_suppress_audio() == (True, "activity:media_playing")
+
+
+def test_dnd_own_playback_does_not_hide_microphone(tmp_path: Path) -> None:
+    capture = tmp_path / "card0" / "pcm0c" / "sub0"
+    capture.mkdir(parents=True)
+    (capture / "status").write_text("state: RUNNING\n")
+    mgr = DNDManager(proc_asound_path=tmp_path)
+
+    mgr.own_playback_started()
+    assert mgr.should_suppress_audio() == (True, "sensor:microphone_in_use")

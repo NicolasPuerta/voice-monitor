@@ -25,11 +25,15 @@ class PlatformDetector:
         etc_root: Path = Path("/etc"),
         run_root: Path = Path("/run"),
         uid: int | None = None,
+        dev_root: Path = Path("/dev"),
+        mnt_root: Path = Path("/mnt"),
     ) -> None:
         self.proc_root = proc_root
         self.sys_root = sys_root
         self.etc_root = etc_root
         self.run_root = run_root
+        self.dev_root = dev_root
+        self.mnt_root = mnt_root
         self.uid = uid
 
     def detect(self) -> PlatformCapabilities:
@@ -167,7 +171,7 @@ class PlatformDetector:
     def _detect_audio_backend(self, uid: int) -> AudioBackendType:
         """Determina el subsistema de audio presente en el sistema."""
         pulse_srv = os.environ.get("PULSE_SERVER", "").lower()
-        wslg_pulse = Path("/mnt/wslg/runtime-dir/pulse/native")
+        wslg_pulse = self.mnt_root / "wslg" / "runtime-dir" / "pulse" / "native"
         if wslg_pulse.exists() or "wslg" in pulse_srv:
             return AudioBackendType.WSLG
 
@@ -179,7 +183,7 @@ class PlatformDetector:
         if pulse_sock.exists() or pulse_srv:
             return AudioBackendType.PULSEAUDIO
 
-        snd_dir = Path("/dev/snd")
+        snd_dir = self.dev_root / "snd"
         if snd_dir.is_dir() and any(snd_dir.iterdir()):
             return AudioBackendType.ALSA
 

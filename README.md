@@ -244,7 +244,7 @@ Edita `.env` para añadir tu `GEMINI_API_KEY` (si deseas análisis con IA) o la 
 | `NARRATION_EVENT_TTL_S` | Tiempo de vida de un evento en cola antes de expirar. | No | `60.0` |
 | `NARRATION_PIPER_MODEL_PATH` | Ruta absoluta al archivo `.onnx` de voz de Piper TTS. | No | `None` |
 | `GEMINI_ENABLED` | Habilita el análisis inteligente con Google Gemini. | No | `false` |
-| `GEMINI_MODEL` | Nombre del modelo de Gemini a consultar. | No | `gemini-2.5-flash` |
+| `GEMINI_MODEL` | Nombre del modelo de Gemini a consultar. | No | `gemini-3.5-flash-lite` |
 | `GEMINI_API_KEY` | Clave secreta de Google AI Studio. | **Sí** (si `GEMINI_ENABLED=true`) | `None` |
 | `STORAGE_DB_PATH` | Ruta del archivo de base de datos SQLite local. | No | `~/.local/share/ubuntu-voice-monitor/events.db` |
 | `PRIVACY_REDACT_HOME` | Sustituye `/home/<usuario>` por `~` en rutas. | No | `true` |
@@ -331,7 +331,7 @@ Eventos en sesión:  14
 ------------------------------------------------------------
 [2] INTELIGENCIA ARTIFICIAL (GEMINI):
   - Habilitado:      True
-  - Modelo:          gemini-2.5-flash
+  - Modelo:          gemini-3.5-flash-lite
   - Circuit Breaker: CLOSED (Saludable)
 ------------------------------------------------------------
 [3] SALIDA DE AUDIO:
@@ -361,8 +361,8 @@ python scripts/demo_pipeline.py --test-gemini
 ## 7. Configuración y Funcionamiento de Gemini
 
 ### 7.1 Integración y SDK
-- **SDK Oficial:** Utiliza la librería `google-generativeai` configurada de forma aislada en `GeminiClient` (`app.core.gemini`).
-- **Modelo Predeterminado:** `gemini-2.5-flash`.
+- **SDK Oficial:** Utiliza el SDK `google-genai` configurado de forma aislada en `GeminiClient` (`app.core.gemini`).
+- **Modelo Predeterminado:** `gemini-3.5-flash-lite`.
 - **Estructura de Datos Enviada:** Únicamente se envía un objeto `GeminiContext` que contiene el resumen seguro del evento (`SafeEventSummary`: nombre de aplicación sanitizado, tipo de evento, severidad, puntaje y duración) y las métricas globales del sistema (promedio de carga y % de memoria).
 - **Respuesta Estructurada:** El modelo genera respuestas orientadas a personas mediante esquemas estructurados de análisis (`AnalysisResult`) que priorizan la claridad y la brevedad.
 

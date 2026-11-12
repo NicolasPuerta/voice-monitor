@@ -14,6 +14,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import time
 from typing import Any
+import pytest
 
 from app.collectors.health import SourceHealthManager, SourceState
 from app.collectors.journald import JournaldCollector
@@ -211,7 +212,9 @@ def test_offline_full_pipeline_hardening(tmp_path: Path) -> None:
     db.stop()
 
 
-def test_independent_collector_isolation_and_degradation() -> None:
+def test_independent_collector_isolation_and_degradation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Verifica que un fallo catastrófico en un collector no detenga a los demás."""
     health_mgr = SourceHealthManager()
 
@@ -240,7 +243,10 @@ def test_independent_collector_isolation_and_degradation() -> None:
         SourceState.DISABLED,
     )
 
-    # Collector de journald ausente
+    # Collector de journald ausente (aunque el host tenga systemd-python)
+    monkeypatch.setattr(
+        JournaldCollector, "_get_default_reader", staticmethod(lambda: None)
+    )
     j_coll = JournaldCollector(health_mgr, reader=None, entry_source=None)
     assert j_coll.collect() is None
     assert j_coll.collect() is None

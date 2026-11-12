@@ -4,6 +4,8 @@ from datetime import timedelta
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import pytest
+
 from app.collectors.health import SourceHealthManager
 from app.core.analysis import AnalysisAgent
 from app.core.audio.manager import AudioQueueManager
@@ -18,7 +20,9 @@ from app.core.privacy import PrivacySanitizer
 from app.core.replay import ReplayEngine
 from app.core.scoring import ScoringEngine
 from app.domain.enums import EventPriority, EventSeverity, EventType
+from app.domain.context import SystemContext
 from app.domain.events import Event, EventMetadata, ScoreBreakdown, ScoreResult
+from app.domain.snapshots import ResourceSnapshot
 from app.storage.db import BackgroundDatabase
 from app.storage.repositories import EventRepository, KnowledgeRepository
 from tests.fixtures.scenarios import (
@@ -150,11 +154,14 @@ def test_electron_saturation_and_anti_spam(tmp_path: Path) -> None:
     db.stop()
 
 
-def test_resilience_gemini_network_failure(tmp_path: Path) -> None:
+def test_resilience_gemini_network_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Verifica que fallos de red en Gemini degraden sin detener el monitoreo."""
     pipeline, db, health = _setup_pipeline(tmp_path, test_mode_gemini=False)
 
-    # Simulamos fallo continuo en el agente de análisis
+    # Simulamos Gemini configurado pero con fallo continuo en el agente de análisis
+    monkeypatch.setattr(pipeline, "_gemini_available", lambda: True)
     pipeline.analysis_agent.analyze = MagicMock(side_effect=Exception("Timeout 503"))
 
     ev = Event(
@@ -166,7 +173,19 @@ def test_resilience_gemini_network_failure(tmp_path: Path) -> None:
     )
 
     # La tubería procesa el evento enviándolo al worker de Gemini
-    pipeline._dispatch_to_gemini(ev, (1, 1, 1), 50.0)
+    ctx = SystemContext(
+        collected_at=BASE_TIME,
+        resources=ResourceSnapshot(
+            cpu_percent=90.0,
+            cpu_count_logical=8,
+            load_average=(1.0, 1.0, 1.0),
+            memory_total_bytes=16_000,
+            memory_used_bytes=8_000,
+            memory_available_bytes=8_000,
+            memory_percent=50.0,
+        ),
+    )
+    pipeline._dispatch_to_gemini(ev, ctx)
 
     # Damos tiempo al worker para procesar el intento fallido
     import time

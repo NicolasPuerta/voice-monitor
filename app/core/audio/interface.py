@@ -1,6 +1,7 @@
 """Interfaces base para generacin y reproduccin de audio."""
 
 from abc import ABC, abstractmethod
+from typing import Protocol
 
 from app.domain.audio import AudioData
 
@@ -32,3 +33,13 @@ class AudioPlayer(ABC):
     def stop(self) -> None:
         """Interrumpe la reproduccin en curso."""
         pass
+
+
+class PlaybackObserver(Protocol):
+    """Recibe avisos cuando el monitor reproduce su propia narración."""
+
+    def own_playback_started(self) -> None:
+        """Se invoca justo antes de reproducir."""
+
+    def own_playback_finished(self) -> None:
+        """Se invoca al terminar la reproducción, incluso si falló."""

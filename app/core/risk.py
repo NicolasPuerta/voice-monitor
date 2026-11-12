@@ -5,7 +5,7 @@ Evalúa de forma puramente observacional y basada en evidencias:
 - Procesos en estado D (espera no interrumpible / disk-sleep).
 - Acumulación de procesos zombies.
 - Presión extrema de recursos (PSI).
-- Bucles de fallos repetidos y flapping de servicios.
+- Caídas de servicios, bucles de fallos repetidos y flapping.
 
 No ejecuta acciones correctivas ni modifica procesos.
 """
@@ -28,6 +28,12 @@ from app.domain.risk import RiskCategory, RiskLevel, RiskSignal
 from app.domain.systemd import SystemdSnapshot
 
 logger = logging.getLogger(__name__)
+
+# Remitentes de journald que informan con autoridad sobre caídas de servicios.
+SERVICE_MANAGER_IDENTIFIERS = frozenset({"systemd", "systemd-coredump"})
+
+# PID de kthreadd, padre de todos los hilos del kernel en Linux.
+KTHREADD_PID = 2
 
 
 class RiskEngine:
@@ -52,6 +58,9 @@ class RiskEngine:
 
         # Historial de procesos en estado D: pid -> ticks consecutivos
         self._d_state_consecutive_ticks: dict[int, int] = defaultdict(int)
+
+        # Unidades en estado failed en la evaluación anterior (None = sin datos aún)
+        self._previously_failed: set[str] | None = None
 
     def evaluate(
         self,
@@ -149,6 +158,10 @@ class RiskEngine:
             all_processes.extend(app.processes)
 
         for proc in all_processes:
+            # Los hilos del kernel (kworker, jbd2...; hijos de kthreadd, PID 2)
+            # pasan por estado D de forma rutinaria, p. ej. i915_flip en cada vblank.
+            if proc.pid == KTHREADD_PID or proc.parent_pid == KTHREADD_PID:
+                continue
             st = (proc.status or "").lower()
             if st in ("disk-sleep", "d"):
                 active_d_pids.add(proc.pid)
@@ -286,31 +299,59 @@ class RiskEngine:
         journald: JournaldSnapshot | None,
         now: datetime,
     ) -> list[RiskSignal]:
-        """Detecta bucles de reinicio continuo o fallos recurrentes de servicios."""
+        """Detecta caídas nuevas de servicios y bucles de fallos recurrentes.
+
+        Cada caída cuenta una sola vez. Si journald está disponible, es la fuente:
+        sus mensajes de systemd ven también los reinicios automáticos, que
+        nunca dejan la unidad en failed. Si no, se usan las transiciones a failed
+        de systemd (una unidad que sigue caída no suma fallos en cada tick). Las
+        unidades ya caídas al arrancar el monitor no se anuncian.
+        """
         signals: list[RiskSignal] = []
-        current_failed: set[str] = set()
+        new_failures: set[str] = set()
 
-        # Registrar fallos observados en systemd
-        if systemd:
-            for u in systemd.failed_units:
-                current_failed.add(u.name)
+        failed_now = {u.name for u in systemd.failed_units} if systemd else None
 
-        # Registrar caídas observadas en journald
-        if journald:
+        if journald is not None:
             for f in journald.service_failures:
-                if f.unit:
-                    current_failed.add(f.unit)
+                # Solo el gestor de servicios es autoridad sobre una caída; otras
+                # apps pueden escribir "crashed" en sus propios logs.
+                if (
+                    f.unit
+                    and f.unit.endswith(".service")
+                    and f.identifier in SERVICE_MANAGER_IDENTIFIERS
+                ):
+                    new_failures.add(f.unit)
+        elif failed_now is not None and self._previously_failed is not None:
+            new_failures = failed_now - self._previously_failed
+
+        if failed_now is not None:
+            self._previously_failed = failed_now
 
         # Actualizar historial y podar entradas antiguas fuera de la ventana
         cutoff = now.timestamp() - self.flapping_window_s
-        for unit_name in current_failed:
+        for unit_name in sorted(new_failures):
             history = self._service_failure_history[unit_name]
             history.append(now)
             # Mantener solo los de la ventana
             fresh = [t for t in history if t.timestamp() >= cutoff]
             self._service_failure_history[unit_name] = fresh
 
-            if len(fresh) >= self.flapping_threshold:
+            if len(fresh) < self.flapping_threshold:
+                signals.append(
+                    RiskSignal(
+                        category=RiskCategory.SERVICE_FAILURE,
+                        level=RiskLevel.HIGH,
+                        title=f"El servicio '{unit_name}' falló",
+                        description="terminó con error según systemd.",
+                        evidence={"service": unit_name},
+                        detected_at=now,
+                        service_name=unit_name,
+                        app_key=unit_name,
+                        confidence="high",
+                    )
+                )
+            else:
                 mins = int(self.flapping_window_s // 60)
                 signals.append(
                     RiskSignal(
@@ -345,6 +386,7 @@ class RiskEngine:
             RiskCategory.ZOMBIE: EventType.ZOMBIE_ACCUMULATION,
             RiskCategory.EXTREME_PRESSURE: EventType.EXTREME_PRESSURE,
             RiskCategory.REPEATED_FAILURES: EventType.SERVICE_FLAPPING,
+            RiskCategory.SERVICE_FAILURE: EventType.SERVICE_FAILED,
         }
         severity_mapping = {
             RiskLevel.CRITICAL: EventSeverity.CRITICAL,
