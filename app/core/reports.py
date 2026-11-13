@@ -370,6 +370,45 @@ class SessionReportData:
     generated_at: str = ""
 
 
+LIVE_SNIPPET = """
+<div id="live-badge" style="position:fixed;top:10px;right:10px;z-index:9999;
+background:#16a34a;color:#fff;padding:4px 12px;border-radius:12px;
+font:600 12px sans-serif;box-shadow:0 1px 4px rgba(0,0,0,.3)">
+&#9679; EN VIVO &middot; cada __SECONDS__ s</div>
+<script>
+(function () {
+  var seconds = __SECONDS__;
+  async function tick() {
+    var badge = document.getElementById("live-badge");
+    try {
+      var resp = await fetch(location.pathname + "?_=" + Date.now(),
+                             {cache: "no-store"});
+      if (!resp.ok) { throw new Error("HTTP " + resp.status); }
+      var doc = new DOMParser().parseFromString(await resp.text(), "text/html");
+      var y = window.scrollY;
+      document.body.innerHTML = doc.body.innerHTML;
+      window.scrollTo(0, y);
+    } catch (err) {
+      if (badge) {
+        badge.style.background = "#dc2626";
+        badge.textContent = "\u25CF SIN CONEXIÓN";
+      }
+    }
+  }
+  setInterval(tick, seconds * 1000);
+})();
+</script>
+"""
+
+
+def inject_live_script(html: str, refresh_s: int) -> str:
+    """Inserta el script de actualización en vivo antes de ``</body>``."""
+    snippet = LIVE_SNIPPET.replace("__SECONDS__", str(int(refresh_s)))
+    if "</body>" in html:
+        return html.replace("</body>", snippet + "</body>", 1)
+    return html + snippet
+
+
 class ReportService:
     """Genera informes HTML y PDF estructurados a partir de SQLite."""
 
@@ -702,15 +741,26 @@ class ReportService:
             generated_at=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
         )
 
-    def generate_html(self, session_id: str | None = None) -> str:
-        """Compila y renderiza el informe en formato HTML mediante Jinja2."""
+    def generate_html(
+        self,
+        session_id: str | None = None,
+        live_refresh_s: int | None = None,
+    ) -> str:
+        """Compila y renderiza el informe en formato HTML mediante Jinja2.
+
+        Con ``live_refresh_s`` se inyecta un script que vuelve a pedir la página
+        cada ese número de segundos y actualiza el contenido sin recargar.
+        """
         data = self.fetch_report_data(session_id)
 
         try:
             import jinja2
 
             template = jinja2.Template(HTML_REPORT_TEMPLATE, autoescape=True)
-            return str(template.render(data=data))
+            html = str(template.render(data=data))
+            if live_refresh_s is not None:
+                html = inject_live_script(html, live_refresh_s)
+            return html
         except ImportError:
             # Fallback simple en caso de ausencia de Jinja2
             return (

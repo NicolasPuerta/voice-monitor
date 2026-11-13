@@ -59,6 +59,7 @@ def test_detect_native_ubuntu_22_04(tmp_path: Path) -> None:
         sys_root=sys_dir,
         etc_root=etc,
         run_root=run,
+        mnt_root=tmp_path / "mnt",
         uid=1000,
     )
 
@@ -111,6 +112,7 @@ def test_detect_native_debian_12(tmp_path: Path) -> None:
         sys_root=sys_dir,
         etc_root=etc,
         run_root=run,
+        mnt_root=tmp_path / "mnt",
         uid=1000,
     )
 
