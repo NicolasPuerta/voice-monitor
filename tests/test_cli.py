@@ -253,6 +253,8 @@ def test_cli_start_foreground_executes_and_terminates(
     mock_settings.narration.event_ttl_s = 60.0
     mock_settings.app.log_level = "INFO"
     mock_settings.dnd.enabled = False
+    mock_settings.detector.cpu_threshold = 80.0
+    mock_settings.detector.app_cpu_threshold = 25.0
     mock_settings.collector.interval_s = 0.01
 
     with patch("app.cli.RuntimeManager", return_value=runtime), \

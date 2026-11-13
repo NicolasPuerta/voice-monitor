@@ -12,6 +12,7 @@ from pathlib import Path
 import sqlite3
 from typing import Any
 
+from app.core.host_metrics import build_line_chart, collect_host_metrics
 from app.core.privacy import PrivacySanitizer
 
 logger = logging.getLogger(__name__)
@@ -172,6 +173,61 @@ HTML_REPORT_TEMPLATE = """<!DOCTYPE html>
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- Métricas del equipo -->
+    <div class="section">
+      <h2>Métricas del equipo</h2>
+      <p style="color: var(--text-muted); margin-top: 0;">
+        Instantánea tomada a las {{ data.host_metrics.captured_at }}
+      </p>
+      <div class="meta-grid">
+        {% for g in data.host_metrics.gauges %}
+        <div class="kpi-card">
+          <div class="kpi-label">{{ g.label }}</div>
+          <div class="kpi-value">{{ g.percent }}%</div>
+          <div style="height: 6px; background: var(--border); border-radius: 3px;
+                      margin: 6px 0;">
+            {% if g.percent >= 90 %}{% set bar = '#dc2626' %}
+          {% elif g.percent >= 70 %}{% set bar = '#f59e0b' %}
+          {% else %}{% set bar = '#16a34a' %}{% endif %}
+          <div style="height: 6px; border-radius: 3px; width: {{ g.percent }}%;
+                      background: {{ bar }};"></div>
+          </div>
+          <div style="font-size: 12px; color: var(--text-muted);">{{ g.detail }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      <table>
+        <tbody>
+          {% for label, value in data.host_metrics.info %}
+          <tr><td><strong>{{ label }}</strong></td><td>{{ value }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% if data.host_metrics.top_memory %}
+      <h3>Procesos con más memoria</h3>
+      <table>
+        <tbody>
+          {% for proc in data.host_metrics.top_memory %}
+          <tr><td>{{ proc.name }}</td><td>{{ proc.rss }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+      <h3>CPU durante la sesión</h3>
+      {% if data.charts.cpu %}{{ data.charts.cpu|safe }}{% else %}
+      <p style="color: var(--text-muted);">
+        Aún no hay datos suficientes (se necesitan al menos 2 minutos de sesión).
+      </p>{% endif %}
+      <h3>Memoria durante la sesión</h3>
+      {% if data.charts.memory %}{{ data.charts.memory|safe }}{% else %}
+      <p style="color: var(--text-muted);">
+        Aún no hay datos suficientes (se necesitan al menos 2 minutos de sesión).
+      </p>{% endif %}
+      <p style="font-size: 12px; color: var(--text-muted);">
+        Línea sólida: promedio por minuto. Línea punteada roja: máximo del minuto.
+      </p>
     </div>
 
     <!-- Resumen y Nivel de Confianza -->
@@ -368,6 +424,47 @@ class SessionReportData:
     confidence_counts: dict[str, int] = field(default_factory=dict)
     decisions_breakdown: dict[str, int] = field(default_factory=dict)
     generated_at: str = ""
+    host_metrics: dict[str, Any] = field(default_factory=dict)
+    charts: dict[str, str] = field(default_factory=dict)
+
+
+LIVE_SNIPPET = """
+<div id="live-badge" style="position:fixed;top:10px;right:10px;z-index:9999;
+background:#16a34a;color:#fff;padding:4px 12px;border-radius:12px;
+font:600 12px sans-serif;box-shadow:0 1px 4px rgba(0,0,0,.3)">
+&#9679; EN VIVO &middot; cada __SECONDS__ s</div>
+<script>
+(function () {
+  var seconds = __SECONDS__;
+  async function tick() {
+    var badge = document.getElementById("live-badge");
+    try {
+      var resp = await fetch(location.pathname + "?_=" + Date.now(),
+                             {cache: "no-store"});
+      if (!resp.ok) { throw new Error("HTTP " + resp.status); }
+      var doc = new DOMParser().parseFromString(await resp.text(), "text/html");
+      var y = window.scrollY;
+      document.body.innerHTML = doc.body.innerHTML;
+      window.scrollTo(0, y);
+    } catch (err) {
+      if (badge) {
+        badge.style.background = "#dc2626";
+        badge.textContent = "\u25CF SIN CONEXIÓN";
+      }
+    }
+  }
+  setInterval(tick, seconds * 1000);
+})();
+</script>
+"""
+
+
+def inject_live_script(html: str, refresh_s: int) -> str:
+    """Inserta el script de actualización en vivo antes de ``</body>``."""
+    snippet = LIVE_SNIPPET.replace("__SECONDS__", str(int(refresh_s)))
+    if "</body>" in html:
+        return html.replace("</body>", snippet + "</body>", 1)
+    return html + snippet
 
 
 class ReportService:
@@ -702,15 +799,52 @@ class ReportService:
             generated_at=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
         )
 
-    def generate_html(self, session_id: str | None = None) -> str:
-        """Compila y renderiza el informe en formato HTML mediante Jinja2."""
+    def build_charts(self, session_id: str) -> dict[str, str]:
+        """Construye los gráficos SVG de CPU y memoria desde ``minute_agg``."""
+        charts: dict[str, str] = {}
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                for metric, color in (("cpu", "#2563eb"), ("memory", "#7c3aed")):
+                    rows = conn.execute(
+                        """
+                        SELECT minute_timestamp, avg_val, max_val
+                        FROM minute_agg
+                        WHERE session_id = ? AND metric_name = ?
+                        ORDER BY minute_timestamp ASC
+                        """,
+                        (session_id, metric),
+                    ).fetchall()
+                    points = [
+                        (str(r[0]), float(r[1] or 0.0), float(r[2] or 0.0))
+                        for r in rows
+                    ]
+                    charts[metric] = build_line_chart(points, color)
+        except sqlite3.Error as exc:
+            logger.warning("No se pudieron leer las series por minuto: %s", exc)
+        return charts
+
+    def generate_html(
+        self,
+        session_id: str | None = None,
+        live_refresh_s: int | None = None,
+    ) -> str:
+        """Compila y renderiza el informe en formato HTML mediante Jinja2.
+
+        Con ``live_refresh_s`` se inyecta un script que vuelve a pedir la página
+        cada ese número de segundos y actualiza el contenido sin recargar.
+        """
         data = self.fetch_report_data(session_id)
+        data.host_metrics = collect_host_metrics()
+        data.charts = self.build_charts(data.session_id)
 
         try:
             import jinja2
 
             template = jinja2.Template(HTML_REPORT_TEMPLATE, autoescape=True)
-            return str(template.render(data=data))
+            html = str(template.render(data=data))
+            if live_refresh_s is not None:
+                html = inject_live_script(html, live_refresh_s)
+            return html
         except ImportError:
             # Fallback simple en caso de ausencia de Jinja2
             return (

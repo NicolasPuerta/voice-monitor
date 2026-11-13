@@ -36,6 +36,7 @@ from app.core.logging import configure_logging, get_logger
 from app.core.pipeline import NarrationPipeline
 from app.core.platform import PlatformDetector
 from app.core.privacy import PrivacySanitizer
+from app.core.live_report import create_live_server
 from app.core.reports import ReportService
 from app.core.runtime import RuntimeManager
 from app.core.scoring import ScoringEngine
@@ -49,6 +50,19 @@ from app.storage.repositories import (
 )
 
 logger = logging.getLogger("app.cli")
+
+
+def _umbral_type(value: str) -> int:
+    """Valida que ``--umbral`` sea un entero entre 1 y 100."""
+    try:
+        number = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(
+            f"'{value}' no es un entero válido (use 1-100)."
+        ) from exc
+    if not 1 <= number <= 100:
+        raise argparse.ArgumentTypeError("el umbral debe estar entre 1 y 100.")
+    return number
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -85,8 +99,21 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Ruta a archivo .env o configuración personalizada.",
     )
+    parser.add_argument(
+        "--umbral",
+        "--threshold",
+        dest="umbral",
+        type=_umbral_type,
+        default=None,
+        metavar="PORCENTAJE",
+        help=(
+            "Umbral de CPU global (1-100). Junto a un subcomando (p. ej. "
+            "'start') aplica solo a esa ejecución; solo ('narrator --umbral 70') "
+            "se guarda en la configuración y se aplica al monitor en ejecución."
+        ),
+    )
 
-    subparsers = parser.add_subparsers(dest="command", required=True)
+    subparsers = parser.add_subparsers(dest="command", required=False)
 
     # Subcomando: start
     start_p = subparsers.add_parser("start", help="Inicia el monitor.")
@@ -220,6 +247,24 @@ def build_parser() -> argparse.ArgumentParser:
         type=str,
         default=None,
         help="Ruta de salida del archivo generado.",
+    )
+    report_p.add_argument(
+        "--live",
+        action="store_true",
+        default=False,
+        help="Sirve el informe HTML en tiempo real en http://127.0.0.1:PUERTO.",
+    )
+    report_p.add_argument(
+        "--port",
+        type=int,
+        default=8765,
+        help="Puerto del informe en vivo (por defecto 8765).",
+    )
+    report_p.add_argument(
+        "--refresh",
+        type=int,
+        default=5,
+        help="Segundos entre actualizaciones del informe en vivo (por defecto 5).",
     )
 
     # Subcomando: service (MR 17)
@@ -379,8 +424,12 @@ def cmd_start(args: argparse.Namespace, runtime: RuntimeManager) -> int:
 
     # 6. Pipeline
     context_builder = SystemContextBuilder(health_manager)
-    cpu_threshold = 0.1 if args.demo else 80.0
-    app_cpu_threshold = 0.1 if args.demo else 25.0
+    cpu_threshold = settings.detector.cpu_threshold
+    app_cpu_threshold = settings.detector.app_cpu_threshold
+    if getattr(args, "umbral", None) is not None:
+        cpu_threshold = float(args.umbral)
+    if args.demo:
+        cpu_threshold = app_cpu_threshold = 0.1
     detector = RuleBasedDetector(
         cpu_threshold=cpu_threshold, app_cpu_threshold=app_cpu_threshold
     )
@@ -441,6 +490,12 @@ def cmd_start(args: argparse.Namespace, runtime: RuntimeManager) -> int:
                 elif cmd_name == "resume":
                     dnd_manager.resume()
                     app_logger.info("DND desactivado por comando de control.")
+                elif cmd_name == "threshold":
+                    detector.cpu_threshold = float(ctrl["value"])
+                    app_logger.info(
+                        "Umbral de CPU actualizado a %s%% por comando de control.",
+                        ctrl["value"],
+                    )
 
             now = datetime.now(timezone.utc)
             pipeline.step(now)
@@ -766,6 +821,9 @@ def cmd_report(
     settings = load_settings_safely(args.config)
     report_svc = ReportService(settings.storage.db_path)
 
+    if args.live:
+        return cmd_report_live(args, report_svc)
+
     target_session = args.session
     fmt = args.format.lower()
 
@@ -810,6 +868,60 @@ def cmd_report(
     except Exception as exc:
         print(f"Error generando informe: {exc}", file=sys.stderr)
         return 1
+
+
+def persist_env_var(env_file: Path, key: str, value: str) -> None:
+    """Crea o actualiza ``KEY=value`` en un archivo ``.env``."""
+    env_file.parent.mkdir(parents=True, exist_ok=True)
+    lines = (
+        env_file.read_text(encoding="utf-8").splitlines() if env_file.exists() else []
+    )
+    new_line = f"{key}={value}"
+    for index, line in enumerate(lines):
+        if line.split("=", 1)[0].strip() == key:
+            lines[index] = new_line
+            break
+    else:
+        lines.append(new_line)
+    env_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def cmd_umbral(args: argparse.Namespace, runtime: RuntimeManager) -> int:
+    """Guarda el umbral de CPU y lo aplica al monitor en ejecución, si lo hay."""
+    if args.config:
+        env_file = Path(args.config)
+    else:
+        env_file = Settings.find_default_env_file() or Settings.default_env_files()[1]
+    persist_env_var(env_file, "DETECTOR_CPU_THRESHOLD", str(args.umbral))
+    print(f"Umbral de CPU guardado: {args.umbral}% ({env_file})")
+    if runtime.get_running_pid() is not None:
+        runtime.send_command("threshold", value=args.umbral)
+        print("Aplicado al monitor en ejecución.")
+    else:
+        print("Se usará la próxima vez que inicie el monitor.")
+    return 0
+
+
+def cmd_report_live(args: argparse.Namespace, report_svc: ReportService) -> int:
+    """Sirve el informe HTML en tiempo real hasta que se pulse Ctrl+C."""
+    refresh = max(1, args.refresh)
+    try:
+        server = create_live_server(
+            report_svc, args.session, port=args.port, refresh_s=refresh
+        )
+    except OSError as exc:
+        print(f"No se pudo abrir el puerto {args.port}: {exc}", file=sys.stderr)
+        return 1
+    url = f"http://127.0.0.1:{server.server_address[1]}/"
+    print(f"Informe en vivo (se actualiza cada {refresh} s): {url}")
+    print("Pulse Ctrl+C para detenerlo.")
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nInforme en vivo detenido.")
+    finally:
+        server.server_close()
+    return 0
 
 
 def cmd_service(args: argparse.Namespace) -> int:
@@ -979,6 +1091,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     runtime = RuntimeManager()
+
+    if args.command is None:
+        if args.umbral is not None:
+            return cmd_umbral(args, runtime)
+        parser.print_help()
+        return 0
 
     if args.command == "start":
         return cmd_start(args, runtime)

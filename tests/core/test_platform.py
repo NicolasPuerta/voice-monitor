@@ -1,10 +1,19 @@
 """Pruebas para el detector de plataforma y capacidades PlatformDetector (MR 17)."""
 
 from pathlib import Path
+
+import pytest
 from unittest.mock import patch
 
 from app.core.platform import PlatformDetector
 from app.domain.platform import AudioBackendType
+
+
+@pytest.fixture(autouse=True)
+def _clean_platform_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Aísla las pruebas de las variables de entorno del host (WSL, Pulse)."""
+    for name in ("WSL_DISTRO_NAME", "WSL_INTEROP", "PULSE_SERVER"):
+        monkeypatch.delenv(name, raising=False)
 
 
 def test_detect_native_ubuntu_22_04(tmp_path: Path) -> None:
@@ -59,6 +68,7 @@ def test_detect_native_ubuntu_22_04(tmp_path: Path) -> None:
         sys_root=sys_dir,
         etc_root=etc,
         run_root=run,
+        mnt_root=tmp_path / "mnt",
         uid=1000,
     )
 
@@ -111,6 +121,7 @@ def test_detect_native_debian_12(tmp_path: Path) -> None:
         sys_root=sys_dir,
         etc_root=etc,
         run_root=run,
+        mnt_root=tmp_path / "mnt",
         uid=1000,
     )
 

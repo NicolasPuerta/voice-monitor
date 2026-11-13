@@ -261,6 +261,18 @@ class DndSettings(_GroupSettings):
     """Si es verdadero, no se narra ningún evento."""
 
 
+class DetectorSettings(_GroupSettings):
+    """Umbrales del detector de CPU (variables ``DETECTOR_*``)."""
+
+    model_config = SettingsConfigDict(env_prefix="DETECTOR_")
+
+    cpu_threshold: float = Field(default=80.0, ge=1, le=100)
+    """Porcentaje de CPU global a partir del cual se genera un evento."""
+
+    app_cpu_threshold: float = Field(default=25.0, ge=1, le=100)
+    """Porcentaje de CPU de una aplicación a partir del cual se genera un evento."""
+
+
 class Settings(BaseModel):
     """Configuración completa e inmutable de la aplicación."""
 
@@ -286,6 +298,9 @@ class Settings(BaseModel):
 
     dnd: DndSettings = Field(default_factory=DndSettings)
     """Configuración de No Molestar."""
+
+    detector: DetectorSettings = Field(default_factory=DetectorSettings)
+    """Umbrales del detector."""
 
     @staticmethod
     def default_env_files() -> tuple[Path, ...]:
@@ -327,6 +342,7 @@ class Settings(BaseModel):
             storage=StorageSettings(_env_file=env_file),
             privacy=PrivacySettings(_env_file=env_file),
             dnd=DndSettings(_env_file=env_file),
+            detector=DetectorSettings(_env_file=env_file),
         )
         logger.debug(
             "Configuración cargada (entorno=%s, nivel de log=%s, gemini=%s).",
