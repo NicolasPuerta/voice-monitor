@@ -36,6 +36,7 @@ from app.core.logging import configure_logging, get_logger
 from app.core.pipeline import NarrationPipeline
 from app.core.platform import PlatformDetector
 from app.core.privacy import PrivacySanitizer
+from app.core.live_report import create_live_server
 from app.core.reports import ReportService
 from app.core.runtime import RuntimeManager
 from app.core.scoring import ScoringEngine
@@ -220,6 +221,24 @@ def build_parser() -> argparse.ArgumentParser:
         type=str,
         default=None,
         help="Ruta de salida del archivo generado.",
+    )
+    report_p.add_argument(
+        "--live",
+        action="store_true",
+        default=False,
+        help="Sirve el informe HTML en tiempo real en http://127.0.0.1:PUERTO.",
+    )
+    report_p.add_argument(
+        "--port",
+        type=int,
+        default=8765,
+        help="Puerto del informe en vivo (por defecto 8765).",
+    )
+    report_p.add_argument(
+        "--refresh",
+        type=int,
+        default=5,
+        help="Segundos entre actualizaciones del informe en vivo (por defecto 5).",
     )
 
     # Subcomando: service (MR 17)
@@ -766,6 +785,9 @@ def cmd_report(
     settings = load_settings_safely(args.config)
     report_svc = ReportService(settings.storage.db_path)
 
+    if args.live:
+        return cmd_report_live(args, report_svc)
+
     target_session = args.session
     fmt = args.format.lower()
 
@@ -810,6 +832,28 @@ def cmd_report(
     except Exception as exc:
         print(f"Error generando informe: {exc}", file=sys.stderr)
         return 1
+
+
+def cmd_report_live(args: argparse.Namespace, report_svc: ReportService) -> int:
+    """Sirve el informe HTML en tiempo real hasta que se pulse Ctrl+C."""
+    refresh = max(1, args.refresh)
+    try:
+        server = create_live_server(
+            report_svc, args.session, port=args.port, refresh_s=refresh
+        )
+    except OSError as exc:
+        print(f"No se pudo abrir el puerto {args.port}: {exc}", file=sys.stderr)
+        return 1
+    url = f"http://127.0.0.1:{server.server_address[1]}/"
+    print(f"Informe en vivo (se actualiza cada {refresh} s): {url}")
+    print("Pulse Ctrl+C para detenerlo.")
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nInforme en vivo detenido.")
+    finally:
+        server.server_close()
+    return 0
 
 
 def cmd_service(args: argparse.Namespace) -> int:
