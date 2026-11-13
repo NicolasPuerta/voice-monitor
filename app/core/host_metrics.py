@@ -190,7 +190,8 @@ def build_line_chart(
 
     def label(ts: str) -> str:
         try:
-            return datetime.fromisoformat(ts).strftime("%H:%M")
+            dt = datetime.fromisoformat(ts)
+            return dt.strftime("%H:%M:%S" if dt.second else "%H:%M")
         except ValueError:
             return ""
 
