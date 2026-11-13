@@ -870,7 +870,6 @@ def cmd_report(
         return 1
 
 
-<<<<<<< HEAD
 def persist_env_var(env_file: Path, key: str, value: str) -> None:
     """Crea o actualiza ``KEY=value`` en un archivo ``.env``."""
     env_file.parent.mkdir(parents=True, exist_ok=True)
@@ -900,7 +899,9 @@ def cmd_umbral(args: argparse.Namespace, runtime: RuntimeManager) -> int:
         print("Aplicado al monitor en ejecución.")
     else:
         print("Se usará la próxima vez que inicie el monitor.")
-=======
+    return 0
+
+
 def cmd_report_live(args: argparse.Namespace, report_svc: ReportService) -> int:
     """Sirve el informe HTML en tiempo real hasta que se pulse Ctrl+C."""
     refresh = max(1, args.refresh)
@@ -920,7 +921,6 @@ def cmd_report_live(args: argparse.Namespace, report_svc: ReportService) -> int:
         print("\nInforme en vivo detenido.")
     finally:
         server.server_close()
->>>>>>> feat/live-report
     return 0
 
 
