@@ -799,8 +799,12 @@ class ReportService:
             generated_at=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
         )
 
-    def build_charts(self, session_id: str) -> dict[str, str]:
-        """Construye los gráficos SVG de CPU y memoria desde ``minute_agg``."""
+    def build_charts(
+        self,
+        session_id: str,
+        live_points: dict[str, list[tuple[str, float, float]]] | None = None,
+    ) -> dict[str, str]:
+        """Construye los gráficos SVG de CPU y memoria desde ``minute_agg`` y en vivo."""
         charts: dict[str, str] = {}
         try:
             with sqlite3.connect(self.db_path) as conn:
@@ -814,10 +818,12 @@ class ReportService:
                         """,
                         (session_id, metric),
                     ).fetchall()
-                    points = [
+                    db_pts = [
                         (str(r[0]), float(r[1] or 0.0), float(r[2] or 0.0))
                         for r in rows
                     ]
+                    extra = (live_points or {}).get(metric, [])
+                    points = extra if len(extra) >= 2 else (db_pts + extra)
                     charts[metric] = build_line_chart(points, color)
         except sqlite3.Error as exc:
             logger.warning("No se pudieron leer las series por minuto: %s", exc)
@@ -827,6 +833,7 @@ class ReportService:
         self,
         session_id: str | None = None,
         live_refresh_s: int | None = None,
+        live_history: Any = None,
     ) -> str:
         """Compila y renderiza el informe en formato HTML mediante Jinja2.
 
@@ -835,7 +842,19 @@ class ReportService:
         """
         data = self.fetch_report_data(session_id)
         data.host_metrics = collect_host_metrics()
-        data.charts = self.build_charts(data.session_id)
+        live_pts: dict[str, list[tuple[str, float, float]]] | None = None
+        if live_history is not None:
+            now_iso = datetime.now(timezone.utc).isoformat()
+            gauges = {
+                g["label"]: float(g["percent"])
+                for g in data.host_metrics.get("gauges", [])
+            }
+            for key, label in (("cpu", "CPU"), ("memory", "Memoria")):
+                if label in gauges and key in live_history:
+                    val = gauges[label]
+                    live_history[key].append((now_iso, val, val))
+            live_pts = {k: list(v) for k, v in live_history.items()}
+        data.charts = self.build_charts(data.session_id, live_points=live_pts)
 
         try:
             import jinja2

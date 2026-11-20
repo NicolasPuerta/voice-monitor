@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import deque
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import logging
 from typing import Any
@@ -10,6 +11,8 @@ from urllib.parse import urlparse
 from app.core.reports import ReportService
 
 logger = logging.getLogger(__name__)
+
+MAX_LIVE_POINTS = 60
 
 
 def create_live_server(
@@ -21,9 +24,14 @@ def create_live_server(
 ) -> ThreadingHTTPServer:
     """Crea (sin iniciar) un servidor que regenera el informe en cada petición.
 
-    Sin ``session_id`` siempre se sirve la sesión más reciente, de modo que el
-    informe sigue al monitor aunque se reinicie.
+    Mantiene además una ventana deslizante en memoria con las lecturas de CPU y
+    memoria de cada refresco, de modo que las gráficas avancen segundo a segundo
+    aunque el monitor esté detenido o aún no haya cerrado el minuto.
     """
+    live_history: dict[str, deque[tuple[str, float, float]]] = {
+        "cpu": deque(maxlen=MAX_LIVE_POINTS),
+        "memory": deque(maxlen=MAX_LIVE_POINTS),
+    }
 
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:  # noqa: N802 (API de http.server)
@@ -31,7 +39,11 @@ def create_live_server(
                 self._send(404, "No encontrado", "text/plain; charset=utf-8")
                 return
             try:
-                html = service.generate_html(session_id, live_refresh_s=refresh_s)
+                html = service.generate_html(
+                    session_id,
+                    live_refresh_s=refresh_s,
+                    live_history=live_history,
+                )
             except Exception as exc:  # pylint: disable=broad-except
                 logger.warning("Error generando informe en vivo: %s", exc)
                 self._send(500, f"Error: {exc}", "text/plain; charset=utf-8")
