@@ -9,6 +9,10 @@
 
 **Ubuntu Voice Monitor** es un agente observacional para sistemas operativos Linux que monitorea en segundo plano el consumo de recursos, la salud de los procesos y eventos del kernel. Cuando ocurre un comportamiento relevante o anómalo (saturación de CPU, presión extrema de memoria, procesos zombi, reinicios en bucle de systemd u OOM Killer), genera una explicación concisa y accesible mediante Google Gemini (o síntesis de reglas local) y la **narra al usuario mediante voz sintetizada**, permitiéndole mantenerse al tanto de la salud de su máquina sin necesidad de monitores de terminal permanentemente abiertos.
 
+<p align="center">
+  <img src="docs/demo_voice_monitor.gif" alt="Demostración en tiempo real de Ubuntu Voice Monitor" width="100%">
+</p>
+
 ---
 
 ## Índice General
